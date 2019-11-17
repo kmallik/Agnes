@@ -1,0 +1,16 @@
+# Input file for component 1
+# NO_STATES
+4
+# NO_CONTROL_INPUTS
+2
+# NO_DIST_INPUTS
+2
+# NO_OUTPUTS
+2
+# STATE_TO_OUTPUT
+2
+1
+1
+2
+# NO_TRANSITIONS
+8
