@@ -53,18 +53,8 @@ public:
     std::vector<abs_type> state_to_output;
     /** @brief vector[R] containing the state indices **/
     std::vector<abs_type> output_to_state;
-    /** @brief number of transitions T **/
-    abs_ptr_type no_transitions;
-    /** @brief transition vector: each element is a valid transition given as the tuple (state,control,disturbance,post_state) **/
-    std::vector<std::array<abs_type,4>> transitions;
-//    /** @brief vector[T] containing the list of all pre */
-//    std::vector<abs_type> pre;
-//    /** @brief vector[N*M*P] containing the pre's address in the array pre[T] **/
-//    std::vector<abs_ptr_type> pre_ptr;
-//    /** @brief vector[N*M*P] saving the number of pre for each state-control input-disturbance input tuple (i,j,k) **/
-//    std::vector<abs_type> no_pre;
-//    /** @brief vector[N*M*P] saving the number of post for each state-control input-disturbance input tuple (i,j,k) **/
-//    std::vector<abs_type> no_post;
+    /** @brief post array: the index ( (i-1)*M*P + (j-1)*P + k ) holds the list of post states for the (state,control,disturbance,post_state)  tuple (i,j,k)**/
+    std::vector<abs_type>** post;
 public:
     /* copy constructor */
     Component(const Component& other) {
@@ -74,7 +64,11 @@ public:
         no_outputs=other.no_outputs;
         state_to_output=other.state_to_output;
         output_to_state=other.output_to_state;
-        no_transitions=other.no_transitions;
+        abs_type size = no_states*no_control_inputs*no_dist_inputs;
+        post = new std::vector<abs_type>*[size];
+        for (int i=0; i<size; i++) {
+            post[i]=other.post[i];
+        }
 //        pre=other.pre;
 //        pre_ptr=other.pre_ptr;
 //        no_pre=other.no_pre;
@@ -102,8 +96,15 @@ public:
         result = readVec<abs_type>(filename, state_to_output, no_states, "STATE_TO_OUTPUT");
         output_to_state.clear();
         result = readVec<abs_type>(filename, output_to_state, no_outputs, "OUTPUT_TO_STATE");
-        result = readMember<abs_ptr_type>(filename, no_transitions, "NO_TRANSITIONS");
-        result = readVecArr<abs_type,4>(filename, transitions, no_transitions, "TRANSITION_MATRIX");
+        result = readArrVec<abs_type,no_states*no_control_inputs*no_dist_inputs>(filename, post, "TRANSITION_POST");
+    }
+    /*! Address of post in post array.
+     * \param[in] i           state index
+     * \param[in] j           control input index
+     * \param[in] k           disturbance input index
+     * \param[out] ind    address of the post state vector in post **/
+    inline int addr(const int i, const int j, const int k) {
+        return ((i-1)*no_control_inputs*no_dist_inputs + (j-1)*no_dist_inputs + k);
     }
 };
 
