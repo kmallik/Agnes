@@ -96,7 +96,13 @@ public:
         result = readVec<abs_type>(filename, state_to_output, no_states, "STATE_TO_OUTPUT");
         output_to_state.clear();
         result = readVec<abs_type>(filename, output_to_state, no_outputs, "OUTPUT_TO_STATE");
-        result = readArrVec<abs_type,no_states*no_control_inputs*no_dist_inputs>(filename, post, "TRANSITION_POST");
+        abs_type no_post_elems = no_states*no_control_inputs*no_dist_inputs;
+        post = new std::vector<abs_type>*[no_post_elems];
+        for (size_t i=0; i<no_post_elems; i++) {
+            std::vector<abs_type> *v = new std::vector<abs_type>;
+            post[i]=v;
+        }
+        result = readArrVec<abs_type>(filename, post, no_post_elems, "TRANSITION_POST");
     }
     /*! Address of post in post array.
      * \param[in] i           state index
