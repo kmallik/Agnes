@@ -7,6 +7,7 @@
 #include <sstream>
 #include <fstream>
 #include <locale>
+#include <vector>
 
 //#include "Functions.hpp"
 /**
@@ -27,19 +28,31 @@ int readMember(const std::string& filename, T& member_value, const std::string& 
                   std::istringstream stream(line);
                   stream >> member_value;
                 } else {
-                    std::cout << "Unable to read data member.\n";
-                    return 0;
+                    try {
+                        throw std::runtime_error("FileHandler:readMember: Unable to read data member");
+                    } catch (std::exception &e) {
+                        std::cout << e.what() << "\n";
+                        return 0;
+                    }
                 }
                 file.close();
                 return 1;
             }
         }
         /* while loop exited and data member was not found */
-        std::cout << "Member named " << member_name << " not found in file " << filename << ".\n";
-        return 0;
+        try {
+            throw std::runtime_error("FileHandler:readMember: Member not found.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
     } else {
-        std::cout << "Unable to open input file.\n";
-        return 0;
+        try {
+            throw std::runtime_error("FileHandler:readMember: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
     }
 }
 
@@ -57,16 +70,24 @@ int readVec(const std::string& filename, std::vector<T>& v, size_t no_elem, cons
                         std::stringstream stream(line);
                         std::locale loc;
                         if (!std::isdigit(line[0],loc)) {
-                            std::cerr << "Number of elements stored for " << vec_name << " in the file " << filename << " does not match with the number of state.\n";
-                            return 0;
+                            try {
+                                throw std::runtime_error("FileHandler:readVec: Number of rows do not match with number of elements.");
+                            } catch (std::exception &e) {
+                                std::cout << e.what() << "\n";
+                                return 0;
+                            }
                         } else {
                             T val;
                             stream >> val;
                             v.push_back(val);
                         }
                     } else {
-                        std::cout << "Unable to read vector.\n";
-                        return 0;
+                        try {
+                            throw std::runtime_error("FileHandler:readVec: Unable to read vector.");
+                        } catch (std::exception &e) {
+                            std::cout << e.what() << "\n";
+                            return 0;
+                        }
                     }
                 }
                 file.close();
@@ -74,11 +95,19 @@ int readVec(const std::string& filename, std::vector<T>& v, size_t no_elem, cons
             }
         }
         /* while loop exited and the vec was not found */
-        std::cout << "Vector named " << vec_name << " not found in file " << filename << ".\n";
-        return 0;
+        try {
+            throw std::runtime_error("FileHandler:readVec: Vector not found.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
     } else {
-        std::cout << "Unable to open input file.\n";
-        return 0;
+        try {
+            throw std::runtime_error("FileHandler:readVec: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
     }
 }
 
@@ -97,8 +126,12 @@ int readVecArr(const std::string& filename, std::vector<std::array<T,SIZE>>& v, 
                         std::stringstream stream(line);
                         std::locale loc;
                         if (!std::isdigit(line[0],loc)) {
-                            std::cerr << "Number of elements stored for " << vec_name << " in the file " << filename << " does not match with the number of state.\n";
-                            return 0;
+                            try {
+                                throw std::runtime_error("FileHandler:readVecArr: Number of rows do not match with number of elements.");
+                            } catch (std::exception &e) {
+                                std::cout << e.what() << "\n";
+                                return 0;
+                            }
                         } else {
                             std::array<T,SIZE> val;
                             for (size_t j=0; j<SIZE; j++) {
@@ -107,8 +140,13 @@ int readVecArr(const std::string& filename, std::vector<std::array<T,SIZE>>& v, 
                             v.push_back(val);
                         }
                     } else {
-                        std::cout << "Unable to read vector.\n";
-                        return 0;
+                        try {
+                            throw std::runtime_error("FileHandler:readVecArr: Unable to read array.");
+                        } catch (std::exception &e) {
+                            std::cout << e.what() << "\n";
+                            return 0;
+                        }
+                        
                     }
                 }
                 file.close();
@@ -116,11 +154,19 @@ int readVecArr(const std::string& filename, std::vector<std::array<T,SIZE>>& v, 
             }
         }
         /* while loop exited and the vec was not found */
-        std::cout << "Vector named " << vec_name << " not found in file " << filename << ".\n";
-        return 0;
+        try {
+            throw std::runtime_error("FileHandler:readVecArr: Vector not found.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
     } else {
-        std::cout << "Unable to open input file.\n";
-        return 0;
+        try {
+            throw std::runtime_error("FileHandler:readVecArr: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
     }
 }
 
@@ -162,8 +208,12 @@ int readArrVec(const std::string& filename, std::vector<T>** arr, size_t no_elem
 ////                            while
 //                        }
                     } else {
-                        std::cout << "Unable to read vector.\n";
-                        return 0;
+                        try {
+                            throw std::runtime_error("FileHandler:readArrVec: Unable to read vector.");
+                        } catch (std::exception &e) {
+                            std::cout << e.what() << "\n";
+                            return 0;
+                        }
                     }
                 }
                 file.close();
@@ -171,10 +221,18 @@ int readArrVec(const std::string& filename, std::vector<T>** arr, size_t no_elem
             }
         }
         /* while loop exited and the vec was not found */
-        std::cout << "Array named " << arr_name << " not found in file " << filename << ".\n";
-        return 0;
+        try {
+            throw std::runtime_error("FileHandler:readArrVec: Array not found.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
     } else {
-        std::cout << "Unable to open input file.\n";
-        return 0;
+        try {
+            throw std::runtime_error("FileHandler:readArrVec: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
     }
 }

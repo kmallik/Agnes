@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "FileHandler.hpp"
+//#include "FileHandler.hpp"
 #include "Component.hpp" /* for the definition of data types abs_type and abs_ptr_type */
 
 /** @namespace negotiation **/
@@ -29,31 +29,55 @@ public:
     /** @brief number of component states N **/
     abs_type no_states;
     /** @brief number of internal disturbance inputs P **/
-    abs_type no_dist_inputs;
+    abs_type no_inputs;
     /** @brief post vector: post[(i-1)*P+j] contains the list of posts for state i and dist_input j **/
     std::vector<abs_type>** post;
 public:
     /* copy constructor */
     SafetyAutomaton(const SafetyAutomaton& other) {
         no_states=other.no_states;
-        no_dist_inputs=other.no_dist_inputs;
-        post = new std::vector<abs_type>*[no_states*no_dist_inputs];
-        for (int i=0; i<no_states*no_dist_inputs; i++) {
+        no_inputs=other.no_inputs;
+        post = new std::vector<abs_type>*[no_states*no_inputs];
+        for (int i=0; i<no_states*no_inputs; i++) {
             post[i]=other.post[i];
         }
     }
     /* constructor */
     SafetyAutomaton(const string& filename) {
         int result = readMember<abs_type>(filename, no_states, "NO_STATES");
-        result = readMember<abs_type>(filename, no_dist_inputs, "NO_DIST_INPUTS");
-        result = readVecArr<abs_type>(filename, post, no_states*no_dist_inputs, "TRANSITION_POST");
+        result = readMember<abs_type>(filename, no_inputs, "NO_INPUTS");
+        abs_type no_elems = no_states*no_inputs;
+        post = new std::vector<abs_type>*[no_elems];
+        for (size_t i=0; i<no_elems; i++) {
+            std::vector<abs_type> *v=new std::vector<abs_type>;
+            post[i]=v;
+        }
+        result = readArrVec<abs_type>(filename, post, no_elems, "TRANSITION_POST");
+        for (size_t i=0; i<no_elems; i++) {
+            for (size_t j=0; j<post[i]->size(); j++) {
+                if ((*post[i])[j]>=no_states) {
+                    try {
+                        throw std::runtime_error("SafetAutomaton: One of the post state indices is out of bound.");
+                    } catch (std::exception& e) {
+                        std::cout << e.what() << "\n";
+                    }
+                }
+            }
+        }
+    }
+    /* Destructor */
+    ~SafetyAutomaton() {
+        int no_elems = no_states*no_inputs;
+        for (int i=0; i<no_elems; i++) {
+            delete post[i];
+        }
     }
     /*! Address of post in post array.
      * \param[in] i           state index
      * \param[in] j           control input index
      * \param[out] ind    address of the post state vector in post **/
-    inline int addr(const int i, const int j) {
-        return ((i-1)*no_dist_inputs + j);
+    inline int addr(const abs_type i, const abs_type j) {
+        return (i*no_inputs + j);
     }
     
 };/* end of class defintion */

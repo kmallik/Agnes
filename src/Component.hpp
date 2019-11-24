@@ -74,6 +74,13 @@ public:
 //        no_pre=other.no_pre;
 //        no_post=other.no_post;
     }
+    /* Destructor */
+    ~Component() {
+        abs_type no_elems = no_states*no_control_inputs*no_dist_inputs;
+        for (int i=0; i<no_elems; i++) {
+            delete post[i];
+        }
+    }
 //    /* destructor */
 //    ~Component() {
 //        deleteVec(state_to_output);
@@ -94,8 +101,20 @@ public:
         result = readMember<abs_type>(filename, no_outputs, "NO_OUTPUTS");
         state_to_output.clear();
         result = readVec<abs_type>(filename, state_to_output, no_states, "STATE_TO_OUTPUT");
+        for (abs_type i=0; i<no_states; i++) {
+            if (state_to_output[i]>=no_outputs) {
+                try {
+                    throw std::runtime_error("Component: output index out of bound.");
+                } catch (std::exception& e) {
+                    std::cout << e.what() << "\n";
+                }
+            }
+        }
         output_to_state.clear();
-        result = readVec<abs_type>(filename, output_to_state, no_outputs, "OUTPUT_TO_STATE");
+        std::vector<abs_type> output_to_state(no_outputs);
+        for (size_t i=0; i<no_states; i++) {
+            output_to_state[state_to_output[i]]=i;
+        }
         abs_type no_post_elems = no_states*no_control_inputs*no_dist_inputs;
         post = new std::vector<abs_type>*[no_post_elems];
         for (size_t i=0; i<no_post_elems; i++) {
@@ -109,8 +128,8 @@ public:
      * \param[in] j           control input index
      * \param[in] k           disturbance input index
      * \param[out] ind    address of the post state vector in post **/
-    inline int addr(const int i, const int j, const int k) {
-        return ((i-1)*no_control_inputs*no_dist_inputs + (j-1)*no_dist_inputs + k);
+    inline int addr(const abs_type i, const abs_type j, const abs_type k) {
+        return (i*no_control_inputs*no_dist_inputs + j*no_dist_inputs + k);
     }
 };
 

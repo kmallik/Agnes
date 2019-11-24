@@ -55,14 +55,39 @@ public:
 //        no_pre=other.no_pre;
 //        no_post=other.no_post;
     }
+    /* Destructor */
+    ~Monitor() {
+        for (int i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
+            delete pre[i];
+        }
+    }
     /* constructor */
-    Monitor(const Component& comp, const SafetyAutomaton& assume, const SafetyAutomaton& guarantee) {
+    Monitor(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee) {
+        /* sanity check */
+        if (comp.no_dist_inputs != assume.no_inputs) {
+            try {
+                throw std::runtime_error("Monitor: assumption automaton's input alphabet size does not match with the component's disturbance input alphabet's size.");
+            } catch (std::exception& e) {
+                std::cout << e.what() << "\n";
+            }
+        }
+        if (comp.no_outputs != guarantee.no_inputs) {
+            try {
+                throw std::runtime_error("Monitor: guarantee automaton's input alphabet size does not match with the component's output alphabet's size.");
+            } catch (std::exception& e) {
+                std::cout << e.what() << "\n";
+            }
+        }
         /* first make sure that the assumption and guarantees are deterministic safety automata */
         /* now compute the product */
-        no_states=(comp.no_states-1)*(assume.no_states-1)*(guarantee.no_states-1)+2;
+        no_states=comp.no_states*(assume.no_states-1)*(guarantee.no_states-1)+2;
         no_control_inputs=comp.no_control_inputs;
         no_dist_inputs=comp.no_dist_inputs;
         pre=new std::vector<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
+        for (int i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
+            std::vector<abs_type> *v=new std::vector<abs_type>;
+            pre[i]=v;
+        }
         for (int ic=0; ic<comp.no_states; ic++) {
             for (int ia=0; ia<assume.no_states; ia++) {
                 for (int ig=0; ig<guarantee.no_states; ig++) {
@@ -72,22 +97,34 @@ public:
                             abs_type im = state_ind(ic,ia,ig,assume.no_states,guarantee.no_states);
                             /* self loops to the reject states */
                             if (im==0 || im==1) {
-                                pre[addr_pre(im,j,k)].push_back(im);
+                                pre[addr_pre(im,j,k)]->push_back(im);
                             }
-                            /* the post component state */
-                            std::vector<abs_type> ic2 = *comp.post[addr(ic,j,k)];
+                            /* the post component states */
+                            std::vector<abs_type> ic2 = *comp.post[comp.addr(ic,j,k)];
                             /* the post assumption state (singleton) */
-                            abs_type ia2 = (*assume.post[addr(ia,k)])[0];
-                            /* the post guarantee state (singleton) */
-                            abs_type ig2 = (*guarantee.post[addr(ig,comp.state_to_output[ic2])])[0];
-                            /* the post state tuple index */
-                            abs_type im2 = state_ind(ic2,ia2,ig2,assume.no_states,guarantee.no_states);
-                            if (ia2!=0 && ig2!=0) {
-                                pre[addr_pre(im2,j,k)]->push_back(im);
-                            } else if (ia2==0 && ig2!=0) {
-                                pre[addr_pre(0,j,k)].push_back(im);
-                            } else if (ig2==0) {
-                                pre[addr_pre(1,j,k)].push_back(im);
+                            abs_type ia2;
+                            if (assume.post[assume.addr(ia,k)]->size()==0) {
+                                continue;
+                            } else {
+                                ia2 = (*assume.post[assume.addr(ia,k)])[0];
+                            }
+                            for (std::vector<abs_type>::iterator it = ic2.begin() ; it != ic2.end(); ++it) {
+                                /* the post guarantee states (singleton) */
+                                abs_type ig2;
+                                if ((guarantee.post[guarantee.addr(ig,comp.state_to_output[*it])])->size()==0) {
+                                                   continue;
+                                } else {
+                                    ig2 = (*guarantee.post[guarantee.addr(ig,comp.state_to_output[*it])])[0];
+                                }
+                                /* the post state tuple index */
+                                abs_type im2 = state_ind(*it,ia2,ig2,assume.no_states,guarantee.no_states);
+                                if (ia2!=0 && ig2!=0) {
+                                    pre[addr_pre(im2,j,k)]->push_back(im);
+                                } else if (ia2==0 && ig2!=0) {
+                                    pre[addr_pre(0,j,k)]->push_back(im);
+                                } else if (ig2==0) {
+                                    pre[addr_pre(1,j,k)]->push_back(im);
+                                }
                             }
                         }
                     }
@@ -100,8 +137,8 @@ public:
      * \param[in] j           control input index
      * \param[in] k           disturbance input index
      * \param[out] ind    address of the post state vector in post **/
-    inline int addr_pre(const int i, const int j, const int k) {
-        return ((i-1)*no_control_inputs*no_dist_inputs + (j-1)*no_dist_inputs + k);
+    inline abs_type addr_pre(const abs_type i, const abs_type j, const abs_type k) {
+        return (i*no_control_inputs*no_dist_inputs + j*no_dist_inputs + k);
     }
     /*! Index of state..
      * \param[in] ic         component state index
@@ -110,8 +147,8 @@ public:
      * \param[in] na        no. of states of assumption automaton
      * \param[in] ng        no. of states of guarantee automaton
      * \param[out] im       monitor state index **/
-    inline int state_ind(const int ic, const int ia, const int ig, const int na, const int ng) {
-        return ((ic-1)*na*ng + (ia-1)*ng + ig);
+    inline abs_type state_ind(const abs_type ic, const abs_type ia, const abs_type ig, const abs_type na, const abs_type ng) {
+        return (ic*(na-1)*(ng-1) + ia*(ng-1) + ig);
     }
 };/* end of class defintions*/
 }/* end of namespace negotiation */
