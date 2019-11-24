@@ -53,7 +53,7 @@ public:
     std::vector<abs_type> state_to_output;
     /** @brief vector[R] containing the state indices **/
     std::vector<abs_type> output_to_state;
-    /** @brief post array: the index ( (i-1)*M*P + (j-1)*P + k ) holds the list of post states for the (state,control,disturbance,post_state)  tuple (i,j,k)**/
+    /** @brief post array: the index ( i*M*P + j*P + k ) holds the list of post states for the (state,control,disturbance,post_state)  tuple (i,j,k), where i, j, k start from 0,..**/
     std::vector<abs_type>** post;
 public:
     /* copy constructor */
@@ -69,10 +69,6 @@ public:
         for (int i=0; i<size; i++) {
             post[i]=other.post[i];
         }
-//        pre=other.pre;
-//        pre_ptr=other.pre_ptr;
-//        no_pre=other.no_pre;
-//        no_post=other.no_post;
     }
     /* Destructor */
     ~Component() {
@@ -81,17 +77,6 @@ public:
             delete post[i];
         }
     }
-//    /* destructor */
-//    ~Component() {
-//        deleteVec(state_to_output);
-//        deleteVec(output_to_state);
-//        deleteVec(pre);
-//        deleteVec(pre_ptr);
-//        deleteVec(no_pre);
-//        deleteVec(no_post);
-//    }
-//    /* deactivate copy asignement operator */
-//    Component& operator=(const Component&) = delete;
     /* @endcond */
     /* constructor */
     Component(const string& filename) {

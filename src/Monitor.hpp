@@ -29,7 +29,7 @@ public:
     abs_type no_control_inputs;
     /** @brief number of internal disturbance inputs P **/
     abs_type no_dist_inputs;
-    /** @brief vector containing the list of all pre: pre[(i-1)*M*P + (j-1)*P + k] lists all pres for the state, control input, dist input pair (i,j,k) */
+    /** @brief vector containing the list of all pre: pre[i*M*P + j*P + k] lists all pres for the state, control input, dist input pair (i,j,k) */
     std::vector<abs_type>** pre;
 //    /** @brief vector[T] containing the list of all pre */
 //    std::vector<abs_type> pre;
@@ -89,16 +89,12 @@ public:
             pre[i]=v;
         }
         for (int ic=0; ic<comp.no_states; ic++) {
-            for (int ia=0; ia<assume.no_states; ia++) {
-                for (int ig=0; ig<guarantee.no_states; ig++) {
+            for (int ia=1; ia<assume.no_states; ia++) {
+                for (int ig=1; ig<guarantee.no_states; ig++) {
                     for (int j=0; j<no_control_inputs; j++) {
                         for (int k=0; k<no_dist_inputs; k++) {
                             /* the pre state index for the tuple (ic,ia,ig)*/
                             abs_type im = state_ind(ic,ia,ig,assume.no_states,guarantee.no_states);
-                            /* self loops to the reject states */
-                            if (im==0 || im==1) {
-                                pre[addr_pre(im,j,k)]->push_back(im);
-                            }
                             /* the post component states */
                             std::vector<abs_type> ic2 = *comp.post[comp.addr(ic,j,k)];
                             /* the post assumption state (singleton) */
@@ -131,6 +127,13 @@ public:
                 }
             }
         }
+        /* self loops to the reject states */
+        for (abs_type j=0; j<no_control_inputs; j++) {
+            for (abs_type k=0; k<no_dist_inputs; k++) {
+                pre[addr_pre(0,j,k)]->push_back(0);
+                pre[addr_pre(1,j,k)]->push_back(1);
+            }
+        }
     }
     /*! Address of pre in pre array.
      * \param[in] i           state index
@@ -142,13 +145,28 @@ public:
     }
     /*! Index of state..
      * \param[in] ic         component state index
-     * \param[in] ia         assumption automaton state index
-     * \param[in] ig         guarantee automaton state index
+     * \param[in] ia         assumption automaton state index, not equal to 0
+     * \param[in] ig         guarantee automaton state index, not equal to 0
      * \param[in] na        no. of states of assumption automaton
      * \param[in] ng        no. of states of guarantee automaton
      * \param[out] im       monitor state index **/
     inline abs_type state_ind(const abs_type ic, const abs_type ia, const abs_type ig, const abs_type na, const abs_type ng) {
-        return (ic*(na-1)*(ng-1) + ia*(ng-1) + ig);
+        /* sanity check */
+        if (ia==0) {
+            try {
+                throw std::domain_error("Monitor:state_ind: The reject state (with index 0) of the assumption automaton should be excluded while constructing the product space of the monitor.\n");
+            } catch (std::exception& e) {
+                std::cout << e.what();
+            }
+        }
+        if (ig==0) {
+            try {
+                throw std::domain_error("Monitor:state_ind: The reject state (with index 0) of the guarantee automaton should be excluded while constructing the product space of the monitor.\n");
+            } catch (std::exception& e) {
+                std::cout << e.what();
+            }
+        }
+        return (ic*(na-1)*(ng-1) + (ia-1)*(ng-1) + (ig-1) + 2); /* the -1 with ia and ig are to shift all the ia and ig indeces leftwards, since the reject state is not used in the product. the +2 in the end is to make sure that reject states of the monitor 0,1 are indeed reserved. */
     }
 };/* end of class defintions*/
 }/* end of namespace negotiation */
