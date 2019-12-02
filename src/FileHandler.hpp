@@ -182,8 +182,6 @@ int readArrVec(const std::string& filename, std::vector<T>** arr, size_t no_elem
             if(line.find(arr_name)!=std::string::npos) {
                 for (size_t i=0; i<no_elem; i++) {
                     if(std::getline(file,line)) {
-//                        std::vector<T> vec;
-//                        arr[i]=&vec;
                         if (line.compare("x")==0) {
                             continue;
                         } else {
@@ -196,17 +194,6 @@ int readArrVec(const std::string& filename, std::vector<T>** arr, size_t no_elem
                                 }
                             }
                         }
-//                        std::stringstream stream(line);
-//                        std::locale loc;
-//                        if (!std::isdigit(line[0],loc)) {
-//                            std::cerr << "Number of elements stored for " << arr_name << " in the file " << filename << " does not match with the number of state.\n";
-//                            return 0;
-//                        } else {
-//
-////                            do
-////                                stream >> *arr[i];
-////                            while
-//                        }
                     } else {
                         try {
                             throw std::runtime_error("FileHandler:readArrVec: Unable to read vector.");
@@ -233,6 +220,105 @@ int readArrVec(const std::string& filename, std::vector<T>** arr, size_t no_elem
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
             return 0;
+        }
+    }
+}
+/* create a file OR erase previous data written to a file */
+void create(const std::string& filename) {
+    std::ofstream file;
+    file.open(filename, std::ofstream::out | std::ofstream::trunc);
+    if (file.is_open()) {
+        file.close();
+    }
+}
+/* some functions for writing data to file */
+template<class T>
+void writeMember(const std::string& filename, const std::string& member_name, T& member_value) {
+    std::ofstream file;
+    file.open(filename, std::ios_base::app);
+    if (file.is_open()) {
+        file << "# " << member_name << "\n";
+        file << member_value << "\n";
+        file.close();
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeMember: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
+}
+
+/* write 1-dimensional integer vector from file */
+template<class T>
+void writeVec(const std::string& filename, const std::string& vec_name, std::vector<T>& v) {
+    std::ofstream file;
+    file.open(filename, std::ios_base::app);
+    if (file.is_open()) {
+        file << "# " << vec_name << "\n";
+        for (int i=0; i<v.size(); i++) {
+            file << v[i] << "\n";
+        }
+        file.close();
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeVec: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
+}
+
+/* write array of vectors (can be thought of as a 2-d table) from file */
+template<class T>
+void writeArrVec(const std::string& filename, const std::string& arr_name, std::vector<T>** arr, size_t no_elem) {
+    std::ofstream file;
+    file.open(filename, std::ios_base::app);
+    if (file.is_open()) {
+        file << "# " << arr_name << "\n";
+        for (int i=0; i<no_elem; i++) {
+            if (arr[i]->size()==0) {
+                file << "x\n";
+            } else {
+                for (int j=0; j<arr[i]->size(); j++) {
+                    file << (*arr[i])[j] << " ";
+                }
+                file << "\n";
+            }
+        }
+        file.close();
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:readArrVec: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
+}
+
+/* write array of unordered sets (can be thought of as a 2-d table) from file */
+template<class T>
+void writeArrUnorderedSet(const std::string& filename, const std::string& arr_name, std::unordered_set<T>** arr, size_t no_elem) {
+    std::ofstream file;
+    file.open(filename, std::ios_base::app);
+    if (file.is_open()) {
+        file << "# " << arr_name << "\n";
+        for (int i=0; i<no_elem; i++) {
+            if (arr[i]->size()==0) {
+                file << "x\n";
+            } else {
+                for (typename std::unordered_set<T>::iterator it=arr[i]->begin(); it!=arr[i]->end(); it++) {
+                    file << (*it) << " ";
+                }
+                file << "\n";
+            }
+        }
+        file.close();
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:readArrVec: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
         }
     }
 }

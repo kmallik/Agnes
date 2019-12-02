@@ -25,7 +25,7 @@ namespace negotiation {
 **/
 class Monitor {
 public:
-    /** @brief number of component states N **/
+    /** @brief number of monitor states N **/
     abs_type no_states;
     /** @brief number of assume automaton states **/
     abs_type no_assume_states;
@@ -148,7 +148,7 @@ public:
                                 abs_type im2 = state_ind(*it,ia2,ig2,no_assume_states,no_guarantee_states);
                                 no_post[im]++;
                                 valid_input[im]->insert(j);
-                                valid_joint_input[im]->insert(join_action_ind(j,k));
+                                valid_joint_input[im]->insert(joint_action_ind(j,k));
                                 if (ia2!=0 && ig2!=0) {
                                     pre[addr_pre(im2,j,k)]->push_back(im);
                                 } else if (ia2==0 && ig2!=0) {
@@ -170,101 +170,6 @@ public:
             }
         }
     }
-    /*! Solve safety game.
-     *
-     * The state reject_A (ind=0) is safe but reject_G (ind=1) is unsafe by default.
-     *
-     * \param[in] component_safe_states         indices of safe states
-     * \param[in] str                                                 string specifying the sure/maybe winning condition
-     * \param[out] D                             winning state-input pairs */
-    std::vector<std::unordered_set<abs_type>*> solve_safety_game(const std::unordered_set<abs_type> component_safe_states, const char* str="sure") {
-        /* sanity check */
-        if (!strcmp(str,"sure") || !strcmp(str,"maybe")) {
-            try {
-                throw std::runtime_error("Monitor: invalid input.");
-            } catch (std::exception& e) {
-                std::cout << e.what() << "\n";
-            }
-        }
-        /* safe states */
-        std::unordered_set<abs_type> monitor_safe_states;
-        for (std::unordered_set<abs_type>::iterator it=component_safe_states.begin(); it!=component_safe_states.end(); ++it) {
-            for (abs_type j=1; j<no_assume_states; j++) {
-                for (abs_type k=1; k<no_guarantee_states; k++) {
-                    monitor_safe_states.insert(state_ind(*it,j,k,no_assume_states,no_guarantee_states));
-                }
-            }
-        }
-        std::queue<abs_type> Q; /* FIFO queue of bad states */
-        std::unordered_set<abs_type> E; /* bad states */
-        std::vector<std::unordered_set<abs_type>*> D; /* set of valid inputs indexed by the state indices */
-        for (int i=0; i<no_states; i++) {
-            std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
-            D.push_back(s);
-        }
-        /* state index 0 is safe but 1 is unsafe */
-        Q.push(1);
-        E.insert(1);
-        if (!strcmp(str,"sure")) {
-            /* for sure winning, D[i] only contains the winning control inputs from state i */
-            for (abs_type i=0; i<no_control_inputs; i++) {
-                D[0]->insert(i);
-            }
-        } else {
-            /* for maybe winning, D[i] contains the input indices from the joint control-internal disturbance input space */
-            for (abs_type j=0; j<no_control_inputs; j++) {
-                for (abs_type k=0; k<no_dist_inputs; k++) {
-                    D[0]->insert(join_action_ind(j,k));
-                }
-            }
-        }
-        
-        /* initialize Q, E, D for all the states other than 0,1 */
-        for (int i=2; i<no_states; i++) {
-            if (!isMember<abs_type>(monitor_safe_states,i) || no_post[i]==0) {
-                Q.push(i);
-                E.insert(i);
-            } else {
-                if (!strcmp(str,"sure")) {
-                    /* for sure winning, D[i] only contains the winning control inputs from state i */
-                    for (std::unordered_set<abs_type>::iterator it=valid_input[i]->begin(); it!=valid_input[i]->end(); ++it) {
-                        D[i]->insert(*it);
-                    }
-                } else {
-                    /* for maybe winning, D[i] contains the input indices from the joint control-internal disturbance input space */
-                    for (std::unordered_set<abs_type>::iterator it=valid_joint_input[i]->begin(); it!=valid_joint_input[i]->end(); ++it) {
-                        D[i]->insert(*it);
-                    }
-                }
-            }
-        }
-        /* iterate until Q is empty, i.e. when a fixed point is reached*/
-        while (Q.size()!=0) {
-            abs_type x = Q.front();
-            Q.pop();
-            for (int j=0; j<no_control_inputs; j++) {
-                for (int k=0; k<no_dist_inputs; k++) {
-                    abs_type x2 = addr_pre(x,j,k);
-                    for (std::vector<abs_type>::iterator it=pre[x2]->begin(); it!=pre[x2]->end(); ++it) {
-                        /* remove all the control inputs from the pre-states of x which lead to x */
-                        if (!strcmp(str,"sure")) {
-                            /* for sure winning, remove the control input */
-                            D[*it]->erase(j);
-                        } else {
-                            /* for maybe winning, remove the joint input */
-                            D[*it]->erase(join_action_ind(j,k));
-                        }
-                        if (D[*it]->size()==0 && !isMember<abs_type>(E,*it)) {
-                            Q.push(*it);
-                            E.insert(*it);
-                        }
-                    }
-                }
-            }
-        }
-        /* winning strategy */
-        return D;
-    }
     /*! Address of pre in pre array.
      * \param[in] i           state index
      * \param[in] j           control input index
@@ -277,7 +182,7 @@ public:
      * \param[in] j           control input index
      * \param[in] k           disturbance input index
      * \param[out] l         index of action-pair (j,k) **/
-    inline abs_type join_action_ind(const abs_type j, const abs_type k) {
+    inline abs_type joint_action_ind(const abs_type j, const abs_type k) {
         return (j*no_dist_inputs + k);
     }
     /*! Index of state..
@@ -305,8 +210,6 @@ public:
         }
         return (ic*(na-1)*(ng-1) + (ia-1)*(ng-1) + (ig-1) + 2); /* the -1 with ia and ig are to shift all the ia and ig indeces leftwards, since the reject state is not used in the product. the +2 in the end is to make sure that reject states of the monitor 0,1 are indeed reserved. */
     }
-    
-private:
     /*! Membership querry for an unordered set.
      *  \param[in] S     the unordered set
      *  \param[in] e    the element */
