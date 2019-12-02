@@ -33,7 +33,7 @@ int main() {
     
     /* the safety game */
     std::unordered_set<negotiation::abs_type> safe_states = {0,1,2,3,4};
-    std::vector<std::unordered_set<negotiation::abs_type>*> win_dom=monitor.solve_safety_game(safe_states);
+    std::vector<std::unordered_set<negotiation::abs_type>*> win_dom=monitor.solve_safety_game(safe_states,"maybe");
 //    for (int i=0; i<win_dom.size(); i++) {
 //        delete win_dom[i];
 //    }
