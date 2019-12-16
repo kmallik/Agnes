@@ -18,6 +18,7 @@
 #include "SafetyAutomaton.hpp"
 #include "Monitor.hpp"
 #include "SafetyGame.hpp"
+#include "Spoilers.hpp"
 #define _USE_MATH_DEFINES
 
 using namespace std;
@@ -28,8 +29,10 @@ using namespace std;
 int main() {
 
     negotiation::Component c1("Inputs/C1.txt");
-    negotiation::SafetyAutomaton assume("Inputs/assume.txt");
-    negotiation::SafetyAutomaton guarantee("Inputs/guarantee.txt");
+    negotiation::SafetyAutomaton assume;
+    assume.readFromFile("Inputs/assume.txt");
+    negotiation::SafetyAutomaton guarantee;
+    guarantee.readFromFile("Inputs/guarantee.txt");
     negotiation::SafetyGame monitor(c1,assume,guarantee);
     
     /* the safety game */
@@ -38,6 +41,12 @@ int main() {
     std::vector<std::unordered_set<negotiation::abs_type>*> maybe_win=monitor.solve_safety_game(safe_states,"maybe");
     
     monitor.find_spoilers(sure_win, maybe_win, "Outputs/spoilers.txt");
+    
+    /* read the spoiler automaton */
+    negotiation::SafetyAutomaton spoiler_full;
+    spoiler_full.readFromFile("Outputs/spoilers.txt");
+    negotiation::Spoilers s1(&spoiler_full);
+    s1.boundedBisim(10);
     
     return 1;
 }

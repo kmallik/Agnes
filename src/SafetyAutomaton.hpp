@@ -4,8 +4,8 @@
  *  Date: 16/11/2019  */
 
 /** @file **/
-#ifndef SAFETYAUTOMATON_HH_
-#define SAFETYAUTOMATON_HH_
+#ifndef SAFETYAUTOMATON_HPP_
+#define SAFETYAUTOMATON_HPP_
 
 #include <vector>
 
@@ -27,35 +27,40 @@ namespace negotiation {
 class SafetyAutomaton {
 public:
     /** @brief number of component states N **/
-    abs_type no_states;
+    abs_type no_states_;
     /** @brief number of internal disturbance inputs P **/
-    abs_type no_inputs;
+    abs_type no_inputs_;
     /** @brief post vector: post[(i-1)*P+j] contains the list of posts for state i and dist_input j **/
-    std::vector<abs_type>** post;
+    std::vector<abs_type>** post_;
 public:
     /* copy constructor */
     SafetyAutomaton(const SafetyAutomaton& other) {
-        no_states=other.no_states;
-        no_inputs=other.no_inputs;
-        post = new std::vector<abs_type>*[no_states*no_inputs];
-        for (int i=0; i<no_states*no_inputs; i++) {
-            post[i]=other.post[i];
+        no_states_=other.no_states_;
+        no_inputs_=other.no_inputs_;
+        post_ = new std::vector<abs_type>*[no_states_*no_inputs_];
+        for (int i=0; i<no_states_*no_inputs_; i++) {
+            post_[i]=other.post_[i];
         }
     }
     /* constructor */
-    SafetyAutomaton(const string& filename) {
-        int result = readMember<abs_type>(filename, no_states, "NO_STATES");
-        result = readMember<abs_type>(filename, no_inputs, "NO_INPUTS");
-        abs_type no_elems = no_states*no_inputs;
-        post = new std::vector<abs_type>*[no_elems];
+    SafetyAutomaton() {
+        no_states_=0;
+        no_inputs_=0;
+    }
+    /* read description of states and transitions from files */
+    void readFromFile(const string& filename) {
+        int result = readMember<abs_type>(filename, no_states_, "NO_STATES");
+        result = readMember<abs_type>(filename, no_inputs_, "NO_INPUTS");
+        abs_type no_elems = no_states_*no_inputs_;
+        post_ = new std::vector<abs_type>*[no_elems];
         for (size_t i=0; i<no_elems; i++) {
             std::vector<abs_type> *v=new std::vector<abs_type>;
-            post[i]=v;
+            post_[i]=v;
         }
-        result = readArrVec<abs_type>(filename, post, no_elems, "TRANSITION_POST");
+        result = readArrVec<abs_type>(filename, post_, no_elems, "TRANSITION_POST");
         for (size_t i=0; i<no_elems; i++) {
-            for (size_t j=0; j<post[i]->size(); j++) {
-                if ((*post[i])[j]>=no_states) {
+            for (size_t j=0; j<post_[i]->size(); j++) {
+                if ((*post_[i])[j]>=no_states_) {
                     try {
                         throw std::runtime_error("SafetAutomaton: One of the post state indices is out of bound.");
                     } catch (std::exception& e) {
@@ -67,9 +72,23 @@ public:
     }
     /* Destructor */
     ~SafetyAutomaton() {
-        int no_elems = no_states*no_inputs;
+        delete[] post_;
+    }
+    /* reset post */
+    void resetPost() {
+        delete[] post_;
+    }
+    /* add post */
+    void addPost(std::vector<abs_type>** post) {
+        /* now set the new post as the one supplied */
+        int no_elems = no_states_*no_inputs_;
+        post_ = new std::vector<abs_type>*[no_elems];
         for (int i=0; i<no_elems; i++) {
-            delete post[i];
+            std::vector<abs_type>* v=new std::vector<abs_type>;
+            post_[i]=v;
+            for (int j=0; j<post[i]->size(); j++) {
+                post_[i]->push_back((*post[i])[j]);
+            }
         }
     }
     /*! Address of post in post array.
@@ -77,9 +96,8 @@ public:
      * \param[in] j           control input index
      * \param[out] ind    address of the post state vector in post **/
     inline int addr(const abs_type i, const abs_type j) {
-        return (i*no_inputs + j);
+        return (i*no_inputs_ + j);
     }
-    
 };/* end of class defintion */
 }/* end of namespace negotiation */
 #endif

@@ -4,8 +4,8 @@
  *  Date: 02/12/2019 */
 
 /** @file **/
-#ifndef SAFETYGAME_HH_
-#define SAFETYGAME_HH_
+#ifndef SAFETYGAME_HPP_
+#define SAFETYGAME_HPP_
 
 //#include "FileHandler.hpp"
 
@@ -123,13 +123,6 @@ public:
     void find_spoilers(const std::vector<std::unordered_set<negotiation::abs_type>*>& sure_win, const std::vector<std::unordered_set<negotiation::abs_type>*>& maybe_win, const std::string& filename) {
         /* erase the content of the file */
         create(filename);
-//        /* get the sure winning states */
-//        std::unordered_set<abs_type> sure_win_dom;
-//        for (abs_type i=2; i<no_states; i++) {
-//            if (sure_win[i]->size()!=0) {
-//                sure_win_dom.insert(i);
-//            }
-//        }
         /* map from old state indices to new state indices */
         std::vector<abs_type> new_state_ind;
         /* count the number of maybe winning states */
@@ -142,8 +135,6 @@ public:
                 new_state_ind.push_back(0);
             }
         }
-//        /* the number of states is equal to number of states in the maybe winning domain + 1 (the sink state) */
-//        n++;
         writeMember(filename, "NO_STATES", n);
         /* the inputs are just the disturbance inputs */
         writeMember(filename, "NO_INPUTS", no_dist_inputs);
@@ -227,9 +218,7 @@ public:
                             }
                         } else {
                             /* if the joint action is not in the maybe winning strategy: transition to reject (ind 0) state */
-//                            if (maybe_win[i]->find(joint_action_ind(j,k)) == maybe_win[i]->end()) {
                             arr2[addr(ind,k)]->insert(0);
-//                            }
                         }
                     }
                 }

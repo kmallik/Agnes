@@ -4,8 +4,8 @@
  *  Date: 16/11/2019 */
 
 /** @file **/
-#ifndef MONITOR_HH_
-#define MONITOR_HH_
+#ifndef MONITOR_HPP_
+#define MONITOR_HPP_
 
 #include <vector>
 #include <queue>
@@ -85,14 +85,14 @@ public:
     /* constructor */
     Monitor(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee) {
         /* sanity check */
-        if (comp.no_dist_inputs != assume.no_inputs) {
+        if (comp.no_dist_inputs != assume.no_inputs_) {
             try {
                 throw std::runtime_error("Monitor: assumption automaton's input alphabet size does not match with the component's disturbance input alphabet's size.");
             } catch (std::exception& e) {
                 std::cout << e.what() << "\n";
             }
         }
-        if (comp.no_outputs != guarantee.no_inputs) {
+        if (comp.no_outputs != guarantee.no_inputs_) {
             try {
                 throw std::runtime_error("Monitor: guarantee automaton's input alphabet size does not match with the component's output alphabet's size.");
             } catch (std::exception& e) {
@@ -101,9 +101,9 @@ public:
         }
         /* first make sure that the assumption and guarantees are deterministic safety automata */
         /* now compute the product */
-        no_states=comp.no_states*(assume.no_states-1)*(guarantee.no_states-1)+2;
-        no_assume_states=assume.no_states;
-        no_guarantee_states=guarantee.no_states;
+        no_states=comp.no_states*(assume.no_states_-1)*(guarantee.no_states_-1)+2;
+        no_assume_states=assume.no_states_;
+        no_guarantee_states=guarantee.no_states_;
         no_control_inputs=comp.no_control_inputs;
         no_dist_inputs=comp.no_dist_inputs;
         no_post.assign(no_states,0);
@@ -131,18 +131,18 @@ public:
                             std::vector<abs_type> ic2 = *comp.post[comp.addr(ic,j,k)];
                             /* the post assumption state (singleton) */
                             abs_type ia2;
-                            if (assume.post[assume.addr(ia,k)]->size()==0) {
+                            if (assume.post_[assume.addr(ia,k)]->size()==0) {
                                 continue;
                             } else {
-                                ia2 = (*assume.post[assume.addr(ia,k)])[0];
+                                ia2 = (*assume.post_[assume.addr(ia,k)])[0];
                             }
                             for (std::vector<abs_type>::iterator it = ic2.begin() ; it != ic2.end(); ++it) {
                                 /* the post guarantee states (singleton) */
                                 abs_type ig2;
-                                if ((guarantee.post[guarantee.addr(ig,comp.state_to_output[*it])])->size()==0) {
+                                if ((guarantee.post_[guarantee.addr(ig,comp.state_to_output[*it])])->size()==0) {
                                                    continue;
                                 } else {
-                                    ig2 = (*guarantee.post[guarantee.addr(ig,comp.state_to_output[*it])])[0];
+                                    ig2 = (*guarantee.post_[guarantee.addr(ig,comp.state_to_output[*it])])[0];
                                 }
                                 /* the post state tuple index */
                                 abs_type im2 = state_ind(*it,ia2,ig2,no_assume_states,no_guarantee_states);

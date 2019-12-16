@@ -4,8 +4,8 @@
  *  Date: 12/11/2019    */
 
 /** @file **/
-#ifndef COMPONENT_HH_
-#define COMPONENT_HH_
+#ifndef COMPONENT_HPP_
+#define COMPONENT_HPP_
 
 #include <iostream>
 #include <vector>
