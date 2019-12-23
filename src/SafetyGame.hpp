@@ -14,7 +14,7 @@ namespace negotiation {
 /**
  *  @class SafetyGame
  *
- *  @brief A header file for solving safety game and creating the spoiling automaton. SafetyGame is a derived class from Monitor.
+ *  @brief A class for solving safety game and creating the spoiling automaton. SafetyGame is a derived class from Monitor.
  */
 class SafetyGame: public Monitor {
 public:
@@ -118,26 +118,72 @@ public:
     /*! Generate the spoiling behavior as a safety automaton and write to a file.
      * \param[in] sure_win    maybe winning state-joint input pairs
      * \param[in] maybe_win maybe winning state-control input pairs
-     * \param[in] file        filename for storing the safety automaton.
+     * \param[in] file        filename for storing the safety automaton
+     * \param[out] true/false   false when some initial state is sure losing, true otherwise.
      */
-    void find_spoilers(const std::vector<std::unordered_set<negotiation::abs_type>*>& sure_win, const std::vector<std::unordered_set<negotiation::abs_type>*>& maybe_win, const std::string& filename) {
-        /* erase the content of the file */
-        create(filename);
-        /* map from old state indices to new state indices */
+    bool find_spoilers(const std::vector<std::unordered_set<negotiation::abs_type>*>& sure_win, const std::vector<std::unordered_set<negotiation::abs_type>*>& maybe_win, const std::string& filename) {
+        /* cretae the spoiler safety automaton */
+        negotiation::SafetyAutomaton spoilers;
+        /* if all the initial states are sure winning, then the set of spoiling behaviors is empty */
+        bool allInitSureWinning=true;
+        for (auto i=init_.begin(); i!=init_.end(); ++i) {
+            if (sure_win[*i]->size()==0) {
+                allInitSureWinning=false;
+                break;
+            }
+        }
+        if (allInitSureWinning) {
+            /* the safety automaton accepts all strings */
+            spoilers.no_states_=2;
+            spoilers.init_.insert(1);
+            spoilers.no_inputs_=no_dist_inputs;
+            std::unordered_set<abs_type>** post=new std::unordered_set<abs_type>*[2*no_dist_inputs];
+            for (int i=0; i<2; i++) {
+                for (int j=0; j<no_dist_inputs; j++) {
+                    std::unordered_set<abs_type> *v=new std::unordered_set<abs_type>;
+                    v->insert(i);
+                    post[addr(i,j)]=v;
+                }
+            }
+            spoilers.addPost(post);
+            delete[] post;
+            spoilers.writeToFile(filename);
+            return true;
+        }
+        /* if not all the initial states are maybe winning, then no negotiation is possible: return false */
+        bool allInitMaybeWinning=true;
+        for (auto i=init_.begin(); i!=init_.end(); ++i) {
+            if (maybe_win[*i]->size()==0) {
+                allInitMaybeWinning=false;
+                break;
+            }
+        }
+        if (!allInitMaybeWinning) {
+            return false;
+        }
+        /* map from old state indices to new state indices: all the losing states (i.e. no maybe winning) are lumped in state 0 */
         std::vector<abs_type> new_state_ind;
-        /* count the number of maybe winning states */
-        int n=0;
-        for (abs_type i=0; i<no_states; i++) {
+        /* count new states */
+        int no_new_states=0;
+        /* the "reject_G" state is mapped to index 0 */
+        new_state_ind.push_back(1);
+        no_new_states++;
+        /* the "reject_A" state is mapped to index 1 */
+        new_state_ind.push_back(0);
+        no_new_states++;
+        /* for the rest of the maybe winning monitor states, a new state index is created, and all the losing monitor states are mapped to state 0 */
+        for (abs_type i=2; i<no_states; i++) {
             if (maybe_win[i]->size()!=0) {
-                new_state_ind.push_back(n);
-                n++;
+                new_state_ind.push_back(no_new_states);
+                no_new_states++;
             } else {
                 new_state_ind.push_back(0);
             }
         }
-        writeMember(filename, "NO_STATES", n);
-        /* the inputs are just the disturbance inputs */
-        writeMember(filename, "NO_INPUTS", no_dist_inputs);
+        /* construct the full safety automaton capturing the set of spoiling behaviors */
+        spoilers.no_states_=no_new_states;
+        spoilers.init_=init_;
+        spoilers.no_inputs_=no_dist_inputs;
         /* construct the post transition array of the original transition systems */
         std::unordered_set<abs_type>** post=new std::unordered_set<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
         for (abs_type i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
@@ -163,18 +209,23 @@ public:
             }
         }
         /* next create a new array by disallowing transitions as per the restriction in sure_win and maybe_win, and abstracting away the control inputs */
-        std::unordered_set<abs_type>** arr2=new std::unordered_set<abs_type>*[n*no_dist_inputs];
-        for (abs_type i=0; i<n*no_dist_inputs; i++) {
+        std::unordered_set<abs_type>** arr2=new std::unordered_set<abs_type>*[no_new_states*no_dist_inputs];
+        for (abs_type i=0; i<no_new_states*no_dist_inputs; i++) {
             std::unordered_set<abs_type>* v=new std::unordered_set<abs_type>;
             arr2[i]=v;
         }
         /* current state index in the domain of maybe_win */
         int ind=0;
+        /* first add self loops to the reject state */
+        for (abs_type k=0; k<no_dist_inputs; k++) {
+            arr2[addr(ind,k)]->insert(0);
+        }
+        ind++;
         /* iterate over all the monitor states */
         for (abs_type q=0; q<no_states; q++) {
-            /* the current state i is either the reject state, or the q-th state in the domain of maybe_win */
+            /* the current state i is set as the q-th state in the domain of maybe_win */
             abs_type i;
-            if (maybe_win[q]->size()!=0 || q==0) {
+            if (maybe_win[q]->size()!=0 && q!=1) {
                 i=q;
             } else {
                 continue;
@@ -182,11 +233,11 @@ public:
             /* if the state i is sure winning: no outgoing transition to reject state, and only outgoing transitions conforming to the strategy */
             if (sure_win[i]->size()!=0) {
                 /* iterate over all the winning strategies */
-                for (std::unordered_set<abs_type>::iterator it=sure_win[i]->begin(); it!=sure_win[i]->end(); ++it) {
+                for (auto it=sure_win[i]->begin(); it!=sure_win[i]->end(); ++it) {
                     /* iterate over all the disturbance inputs*/
                     for (abs_type k=0; k<no_dist_inputs; k++) {
                         /* iterate over all the post states */
-                        for (std::unordered_set<abs_type>::iterator it2=post[addr_post(i,*it,k)]->begin(); it2!=post[addr_post(i,*it,k)]->end(); it2++) {
+                        for (auto it2=post[addr_post(i,*it,k)]->begin(); it2!=post[addr_post(i,*it,k)]->end(); it2++) {
                             arr2[addr(ind,k)]->insert(new_state_ind[*it2]);
                         }
                     }
@@ -213,7 +264,7 @@ public:
                     for (abs_type k=0; k<no_dist_inputs; k++) {
                         if (maybe_win[i]->find(joint_action_ind(j,k)) != maybe_win[i]->end()) {
                             /* iterate over all the post states */
-                            for (std::unordered_set<abs_type>::iterator it2=post[addr_post(i,j,k)]->begin(); it2!=post[addr_post(i,j,k)]->end(); it2++) {
+                            for (auto it2=post[addr_post(i,j,k)]->begin(); it2!=post[addr_post(i,j,k)]->end(); it2++) {
                                 arr2[addr(ind,k)]->insert(new_state_ind[*it2]);
                             }
                         } else {
@@ -225,11 +276,14 @@ public:
                 ind++;
             }
         }
-        /* write arr2 to file */
-        writeArrUnorderedSet(filename, "TRANSITION_POST", arr2, n*no_dist_inputs);
+        spoilers.addPost(arr2);
+        spoilers.writeToFile(filename);
  
         delete[] post;
         delete[] arr2;
+        
+        /* successfully generated a spoiling automaton: return true */
+        return true;
     }
 private:
     /*! Address of post in post array.

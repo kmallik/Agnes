@@ -27,9 +27,11 @@ class Monitor {
 public:
     /** @brief number of monitor states N **/
     abs_type no_states;
-    /** @brief number of assume automaton states **/
+    /** @brief set of initial states **/
+    std::unordered_set<abs_type> init_;
+    /** @brief number of assume automaton states Na **/
     abs_type no_assume_states;
-    /** @brief number of guarantee automaton states **/
+    /** @brief number of guarantee automaton states Ng **/
     abs_type no_guarantee_states;
     /** @brief number of control inputs M **/
     abs_type no_control_inputs;
@@ -37,12 +39,6 @@ public:
     abs_type no_dist_inputs;
     /** @brief vector containing the list of all pre: pre[i*M*P + j*P + k] lists all pres for the state, control input, dist input pair (i,j,k) */
     std::vector<abs_type>** pre;
-//    /** @brief vector[T] containing the list of all pre */
-//    std::vector<abs_type> pre;
-//    /** @brief vector[N*M*P] containing the pre's address in the array pre[T] **/
-//    std::vector<abs_ptr_type> pre_ptr;
-//    /** @brief vector[N*M*P] saving the number of pre for each state-control input-disturbance input tuple (i,j,k) **/
-//    std::vector<abs_type> no_pre;
     /** @brief vector[N] saving the number of post for each state i **/
     std::vector<abs_type> no_post;
     /** @brief vector[N] saving the set of allowed inputs for each state i **/
@@ -53,6 +49,7 @@ public:
     /* copy constructor */
     Monitor(const Monitor& other) {
         no_states=other.no_states;
+        init_=other.init_;
         no_assume_states=other.no_assume_states;
         no_guarantee_states=other.no_guarantee_states;
         no_control_inputs=other.no_control_inputs;
@@ -99,16 +96,25 @@ public:
                 std::cout << e.what() << "\n";
             }
         }
-        /* first make sure that the assumption and guarantees are deterministic safety automata */
-        /* now compute the product */
+        /* compute the product */
+       /* number of states is Nc*(Na-1)*(Ng-1)+2 */
         no_states=comp.no_states*(assume.no_states_-1)*(guarantee.no_states_-1)+2;
         no_assume_states=assume.no_states_;
         no_guarantee_states=guarantee.no_states_;
+        /* initial states of the monitor are given by the cartesian product of the component, assumption and guarantee initial states */
+        for (auto i=comp.init_.begin(); i!=comp.init_.end(); ++i) {
+            for (auto j=assume.init_.begin(); j!=assume.init_.end(); ++j) {
+                for (auto k=guarantee.init_.begin(); k!=guarantee.init_.end(); ++k) {
+                    init_.insert(state_ind(*i,*j,*k,no_assume_states,no_guarantee_states));
+                }
+            }
+        }
         no_control_inputs=comp.no_control_inputs;
         no_dist_inputs=comp.no_dist_inputs;
         no_post.assign(no_states,0);
         no_post[0]=no_control_inputs*no_dist_inputs;
         no_post[1]=no_control_inputs*no_dist_inputs;
+        /* compute and store the predecessors, valid inputs, and valid joint inputs for fast synthesis */
         pre=new std::vector<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
         for (int i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
             std::vector<abs_type> *v=new std::vector<abs_type>;
@@ -134,7 +140,7 @@ public:
                             if (assume.post_[assume.addr(ia,k)]->size()==0) {
                                 continue;
                             } else {
-                                ia2 = (*assume.post_[assume.addr(ia,k)])[0];
+                                ia2 = *(assume.post_[assume.addr(ia,k)])->begin();
                             }
                             for (std::vector<abs_type>::iterator it = ic2.begin() ; it != ic2.end(); ++it) {
                                 /* the post guarantee states (singleton) */
@@ -142,7 +148,7 @@ public:
                                 if ((guarantee.post_[guarantee.addr(ig,comp.state_to_output[*it])])->size()==0) {
                                                    continue;
                                 } else {
-                                    ig2 = (*guarantee.post_[guarantee.addr(ig,comp.state_to_output[*it])])[0];
+                                    ig2 = *(guarantee.post_[guarantee.addr(ig,comp.state_to_output[*it])])->begin();
                                 }
                                 /* the post state tuple index */
                                 abs_type im2 = state_ind(*it,ia2,ig2,no_assume_states,no_guarantee_states);

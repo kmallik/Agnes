@@ -25,9 +25,9 @@ public:
     SafetyAutomaton* spoilers_full_;
     /** @brief minimized spoiling behaviors **/
     SafetyAutomaton* spoilers_mini_;
-    /** @brief mapping of states (minimized to the set of concrete); quotient[0] = {0} **/
+    /** @brief mapping of states (abstract states to the set of concrete states); quotient[0] = {0} **/
     std::vector<std::unordered_set<abs_type>*> quotient_;
-    /** @brief inverse mapping of quotient (concrete states to the minimized states **/
+    /** @brief inverse mapping of quotient (concrete states to the abstract states **/
     std::vector<abs_type> inv_quotient_;
     /** @brief partitions which are fully refined so far **/
     std::unordered_set<abs_type> refined_partitions_;
@@ -41,6 +41,8 @@ public:
         /* the minimized automaton is initialized by clustering all the non-rejecting concrete states into one abstract state and the reject state (index 0) to another */
         spoilers_mini_= new negotiation::SafetyAutomaton();
         spoilers_mini_->no_states_=2;
+        /* initially all the initial states of mini are lumped in the state index 1 */
+        spoilers_mini_->init_.insert(1);
         spoilers_mini_->no_inputs_=spoilers_full_->no_inputs_;
         /* initialization of quotient and inverse quotient */
         std::unordered_set<abs_type>* s0=new std::unordered_set<abs_type>;
@@ -64,9 +66,9 @@ public:
         abs_type ns=spoilers_mini_->no_states_;
         abs_type ni=spoilers_mini_->no_inputs_;
         /* the vector post is used to build the post_ of spoilers_mini_ */
-        std::vector<abs_type>** post = new std::vector<abs_type>*[ns*ni];
+        std::unordered_set<abs_type>** post = new std::unordered_set<abs_type>*[ns*ni];
         for (abs_type i=0; i<ns*ni; i++) {
-            std::vector<abs_type>* v=new std::vector<abs_type>;
+            std::unordered_set<abs_type>* v=new std::unordered_set<abs_type>;
             post[i]=v;
         }
         /* add transitions to post: j-transitions (j is input) are added between two abstract states qi and ql when there exist j-transitions between some concrete state in qi to some concrete state in ql */
@@ -77,24 +79,24 @@ public:
             /* iterate over all the inputs */
             for (abs_type j=0; j<spoilers_full_->no_inputs_; j++) {
                 /* iterate over all the concrete post states */
-                for (int l=0; l<spoilers_full_->post_[spoilers_full_->addr(i,j)]->size(); l++) {
-                    abs_type ql = inv_quotient_[(*spoilers_full_->post_[spoilers_full_->addr(i,j)])[l]];
+                for (auto it=spoilers_full_->post_[spoilers_full_->addr(i,j)]->begin(); it!=spoilers_full_->post_[spoilers_full_->addr(i,j)]->end(); ++it) {
+                    abs_type ql = inv_quotient_[*it];
                     /* check if the current abstract ql state is already added as j-post of qi */
                     bool already_added=false;
-                    for (int k=0; k<post[spoilers_mini_->addr(qi,j)]->size(); k++) {
-                        if ((*post[spoilers_mini_->addr(qi,j)])[k]==ql) {
+                    for (auto it2=post[spoilers_mini_->addr(qi,j)]->begin(); it2!=post[spoilers_mini_->addr(qi,j)]->end(); ++it2) {
+                        if (*it2==ql) {
                             already_added=true;
                             break;
                         }
                     }
                     if (!already_added) {
-                        post[spoilers_mini_->addr(qi,j)]->push_back(ql);
+                        post[spoilers_mini_->addr(qi,j)]->insert(ql);
                     }
                 }
             }
         }
         /* reset transitions of spoilers_mini_ */
-        spoilers_mini_->resetPost();
+//        spoilers_mini_->resetPost();
         spoilers_mini_->addPost(post);
         delete[] post;
     }
@@ -106,14 +108,14 @@ public:
      * \param[in] S2        subset of concrete states which are in j-predecessor of r2 and does not intersect with r1 */
     void computeOverlappingPre(const abs_type& r1, const abs_type& r2, abs_type j, std::unordered_set<abs_type>& S1, std::unordered_set<abs_type>& S2) {
         for (std::unordered_set<abs_type>::iterator i=quotient_[r1]->begin(); i!=quotient_[r1]->end(); ++i) {
-            for (std::vector<abs_type>::iterator k=spoilers_full_->post_[spoilers_full_->addr(*i,j)]->begin(); k!=spoilers_full_->post_[spoilers_full_->addr(*i,j)]->end(); ++k) {
+            for (auto k=spoilers_full_->post_[spoilers_full_->addr(*i,j)]->begin(); k!=spoilers_full_->post_[spoilers_full_->addr(*i,j)]->end(); ++k) {
                 if (quotient_[r2]->find(*k)!=quotient_[r2]->end()) {
                     S1.insert(*i);
                 }
             }
         }
         if (S1.size()<quotient_[r1]->size()) {
-            for (std::unordered_set<abs_type>::iterator i=quotient_[r1]->begin(); i!=quotient_[r1]->end(); ++i) {
+            for (auto i=quotient_[r1]->begin(); i!=quotient_[r1]->end(); ++i) {
                 if (S1.find(*i)==S1.end()) {
                     S2.insert(*i);
                 }
@@ -212,14 +214,21 @@ public:
                 }
             }
         }
+        /* update the initial states: an abstract state is initial if there is some concrete initial state in it */
+        spoilers_mini_->init_.clear();
+        for (auto i=spoilers_full_->init_.begin(); i!=spoilers_full_->init_.end(); ++i) {
+            spoilers_mini_->init_.insert(inv_quotient_[*i]);
+        }
     }
     /*! Perform k-steps of the bounded bisimulation algorithm.
      * \param[in] k         number of refinement iterations */
     void boundedBisim(int k) {
         for (int i=0; i<k; i++) {
             refineQuotient();
+            spoilers_mini_->resetPost();
             computeMiniTransitions();
         }
+//        spoilers_mini_->determinize();
     }
 }; /* end of class definition */
 } /* end of namespace negotiation */

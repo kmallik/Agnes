@@ -1,6 +1,10 @@
 # Input file for component 1: Feeder
 # NO_STATES (N)
 6
+# NO_INITIAL_STATES
+1
+# INITIAL_STATE_LIST
+0
 # NO_CONTROL_INPUTS (M, 0=push, 1=wait)
 2
 # NO_DIST_INPUTS (P, 0=nop2, 1=op2)

@@ -43,6 +43,8 @@ class Component {
 public:
     /** @brief number of component states N **/
     abs_type no_states;
+    /** @brief set of initial state indices **/
+    std::unordered_set<abs_type> init_;
     /** @brief number of control inputs M **/
     abs_type no_control_inputs;
     /** @brief number of internal disturbance inputs P **/
@@ -59,6 +61,7 @@ public:
     /* copy constructor */
     Component(const Component& other) {
         no_states=other.no_states;
+        init_=other.init_;
         no_control_inputs=other.no_control_inputs;
         no_dist_inputs=other.no_dist_inputs;
         no_outputs=other.no_outputs;
@@ -81,6 +84,9 @@ public:
     /* constructor */
     Component(const string& filename) {
         int result = readMember<abs_type>(filename, no_states, "NO_STATES");
+        abs_type ni;
+        result = readMember<abs_type>(filename, ni, "NO_INITIAL_STATES");
+        result = readSet<abs_type>(filename, init_, ni, "INITIAL_STATE_LIST");
         result = readMember<abs_type>(filename, no_control_inputs, "NO_CONTROL_INPUTS");
         result = readMember<abs_type>(filename, no_dist_inputs, "NO_DIST_INPUTS");
         result = readMember<abs_type>(filename, no_outputs, "NO_OUTPUTS");

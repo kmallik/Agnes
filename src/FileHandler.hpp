@@ -8,6 +8,7 @@
 #include <fstream>
 #include <locale>
 #include <vector>
+#include <unordered_set>
 
 //#include "Functions.hpp"
 /**
@@ -104,6 +105,61 @@ int readVec(const std::string& filename, std::vector<T>& v, size_t no_elem, cons
     } else {
         try {
             throw std::runtime_error("FileHandler:readVec: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
+    }
+}
+
+/* read 1-dimensional integer set (unordered) from file */
+template<class T>
+int readSet(const std::string& filename, std::unordered_set<T>& s, size_t no_elem, const std::string& set_name) {
+    std::ifstream file;
+    file.open(filename);
+    if (file.is_open()) {
+        std::string line;
+        while(std::getline(file,line)) {
+            if(line.find(set_name)!=std::string::npos) {
+                for (size_t i=0; i<no_elem; i++) {
+                    if(std::getline(file,line)) {
+                        std::stringstream stream(line);
+                        std::locale loc;
+                        if (!std::isdigit(line[0],loc)) {
+                            try {
+                                throw std::runtime_error("FileHandler:readSet: Number of rows do not match with number of elements.");
+                            } catch (std::exception &e) {
+                                std::cout << e.what() << "\n";
+                                return 0;
+                            }
+                        } else {
+                            T val;
+                            stream >> val;
+                            s.insert(val);
+                        }
+                    } else {
+                        try {
+                            throw std::runtime_error("FileHandler:readSec: Unable to read set.");
+                        } catch (std::exception &e) {
+                            std::cout << e.what() << "\n";
+                            return 0;
+                        }
+                    }
+                }
+                file.close();
+                return 1;
+            }
+        }
+        /* while loop exited and the set was not found */
+        try {
+            throw std::runtime_error("FileHandler:readSec: Set not found.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:readSec: Unable to open input file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
             return 0;
@@ -223,6 +279,59 @@ int readArrVec(const std::string& filename, std::vector<T>** arr, size_t no_elem
         }
     }
 }
+/* read array of unordered sets (can be thought of as a 2-d table) from file */
+template<class T>
+int readArrSet(const std::string& filename, std::unordered_set<T>** arr, size_t no_elem, const std::string& arr_name) {
+    std::ifstream file;
+    file.open(filename);
+    if (file.is_open()) {
+        std::string line;
+        /* go through all the lines until a match with arr_name is found */
+        while(std::getline(file,line)) {
+            if(line.find(arr_name)!=std::string::npos) {
+                for (size_t i=0; i<no_elem; i++) {
+                    if(std::getline(file,line)) {
+                        if (line.compare("x")==0) {
+                            continue;
+                        } else {
+                            std::stringstream line_stream(line);
+                            while (line_stream.good()) {
+                                T x;
+                                line_stream >> x;
+                                if (!line_stream.fail()) {
+                                    arr[i]->insert(x);
+                                }
+                            }
+                        }
+                    } else {
+                        try {
+                            throw std::runtime_error("FileHandler:readArrSet: Unable to read vector.");
+                        } catch (std::exception &e) {
+                            std::cout << e.what() << "\n";
+                            return 0;
+                        }
+                    }
+                }
+                file.close();
+                return 1;
+            }
+        }
+        /* while loop exited and the vec was not found */
+        try {
+            throw std::runtime_error("FileHandler:readArrSet: Array not found.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:readArrSet: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
+    }
+}
 /* create a file OR erase previous data written to a file */
 void create(const std::string& filename) {
     std::ofstream file;
@@ -233,7 +342,7 @@ void create(const std::string& filename) {
 }
 /* some functions for writing data to file */
 template<class T>
-void writeMember(const std::string& filename, const std::string& member_name, T& member_value) {
+void writeMember(const std::string& filename, const std::string& member_name, T member_value) {
     std::ofstream file;
     file.open(filename, std::ios_base::app);
     if (file.is_open()) {
@@ -249,7 +358,7 @@ void writeMember(const std::string& filename, const std::string& member_name, T&
     }
 }
 
-/* write 1-dimensional integer vector from file */
+/* write 1-dimensional integer vector to file */
 template<class T>
 void writeVec(const std::string& filename, const std::string& vec_name, std::vector<T>& v) {
     std::ofstream file;
@@ -263,6 +372,26 @@ void writeVec(const std::string& filename, const std::string& vec_name, std::vec
     } else {
         try {
             throw std::runtime_error("FileHandler:writeVec: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
+}
+
+/* write 1-dimensional integer set (unordered) to file */
+template<class T>
+void writeSet(const std::string& filename, const std::string& set_name, std::unordered_set<T>& s) {
+    std::ofstream file;
+    file.open(filename, std::ios_base::app);
+    if (file.is_open()) {
+        file << "# " << set_name << "\n";
+        for (auto i=s.begin(); i!=s.end(); ++i) {
+            file << *i << "\n";
+        }
+        file.close();
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeSet: Unable to open input file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
         }
@@ -296,9 +425,9 @@ void writeArrVec(const std::string& filename, const std::string& arr_name, std::
     }
 }
 
-/* write array of unordered sets (can be thought of as a 2-d table) from file */
+/* write array of unordered sets (can be thought of as a 2-d table) to file */
 template<class T>
-void writeArrUnorderedSet(const std::string& filename, const std::string& arr_name, std::unordered_set<T>** arr, size_t no_elem) {
+void writeArrSet(const std::string& filename, const std::string& arr_name, std::unordered_set<T>** arr, size_t no_elem) {
     std::ofstream file;
     file.open(filename, std::ios_base::app);
     if (file.is_open()) {
@@ -307,7 +436,7 @@ void writeArrUnorderedSet(const std::string& filename, const std::string& arr_na
             if (arr[i]->size()==0) {
                 file << "x\n";
             } else {
-                for (typename std::unordered_set<T>::iterator it=arr[i]->begin(); it!=arr[i]->end(); it++) {
+                for (auto it=arr[i]->begin(); it!=arr[i]->end(); it++) {
                     file << (*it) << " ";
                 }
                 file << "\n";

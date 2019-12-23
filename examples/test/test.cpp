@@ -46,7 +46,10 @@ int main() {
     negotiation::SafetyAutomaton spoiler_full;
     spoiler_full.readFromFile("Outputs/spoilers.txt");
     negotiation::Spoilers s1(&spoiler_full);
-    s1.boundedBisim(10);
+    s1.boundedBisim(2);
+    s1.spoilers_mini_->writeToFile("Outputs/spoilers_mini.txt");
+    s1.spoilers_mini_->determinize();
+    s1.spoilers_mini_->writeToFile("Outputs/spoilers_mini_det.txt");
     
     return 1;
 }
