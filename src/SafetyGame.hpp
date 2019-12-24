@@ -7,7 +7,6 @@
 #ifndef SAFETYGAME_HPP_
 #define SAFETYGAME_HPP_
 
-//#include "FileHandler.hpp"
 
 /** @namespace negotiation **/
 namespace negotiation {
@@ -38,13 +37,15 @@ public:
         }
         /* safe states */
         std::unordered_set<abs_type> monitor_safe_states;
-        for (std::unordered_set<abs_type>::iterator it=component_safe_states.begin(); it!=component_safe_states.end(); ++it) {
+        for (auto it=component_safe_states.begin(); it!=component_safe_states.end(); ++it) {
             for (abs_type j=1; j<no_assume_states; j++) {
                 for (abs_type k=1; k<no_guarantee_states; k++) {
                     monitor_safe_states.insert(state_ind(*it,j,k,no_assume_states,no_guarantee_states));
                 }
             }
         }
+        /* the reject_A state is also safe */
+        monitor_safe_states.insert(0);
         std::queue<abs_type> Q; /* FIFO queue of bad states */
         std::unordered_set<abs_type> E; /* bad states */
         std::vector<std::unordered_set<abs_type>*> D; /* set of valid inputs indexed by the state indices */
