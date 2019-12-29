@@ -43,10 +43,10 @@ public:
     std::unordered_set<abs_type>** post;
     /** @brief vector[N*M*P] saving the number of post for each pair (i,j,k) **/
     std::vector<abs_type> no_post;
-    /** @brief vector[N] saving the set of allowed inputs for each state i **/
-    std::vector<std::unordered_set<abs_type>*> valid_input;
-    /** @brief vector[N] saving the set of allowed joint inputs for each state i **/
-    std::vector<std::unordered_set<abs_type>*> valid_joint_input;
+//    /** @brief vector[N] saving the set of allowed inputs for each state i **/
+//    std::vector<std::unordered_set<abs_type>*> valid_input;
+//    /** @brief vector[N] saving the set of allowed joint inputs for each state i **/
+//    std::vector<std::unordered_set<abs_type>*> valid_joint_input;
 public:
     /* copy constructor */
     Monitor(const Monitor& other) {
@@ -74,10 +74,14 @@ public:
             }
         }
         no_post=other.no_post;
-        for (int i=0; i<size; i++) {
-            valid_input[i]=other.valid_input[i];
-            valid_joint_input[i]=other.valid_joint_input[i];
-        }
+//        for (int i=0; i<size; i++) {
+//            std::unordered_set<abs_type>* s1 = new std::unordered_set<abs_type>;
+//            valid_input.push_back(s1);
+//            valid_input[i]=other.valid_input[i];
+//            std::unordered_set<abs_type>* s2 = new std::unordered_set<abs_type>;
+//            valid_input.push_back(s2);
+//            valid_joint_input[i]=other.valid_joint_input[i];
+//        }
     }
     /* Destructor */
     ~Monitor() {
@@ -85,10 +89,10 @@ public:
             delete pre[i];
             delete post[i];
         }
-        for (int i=0; i<no_states; i++) {
-            delete valid_input[i];
-            delete valid_joint_input[i];
-        }
+//        for (int i=0; i<no_states; i++) {
+//            delete valid_input[i];
+//            delete valid_joint_input[i];
+//        }
         delete[] pre;
         delete[] post;
     }
@@ -142,12 +146,12 @@ public:
             std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
             post[i]=s;
         }
-        for (int i=0; i<no_states; i++) {
-            std::unordered_set<abs_type> *a = new std::unordered_set<abs_type>;
-            valid_input.push_back(a);
-            std::unordered_set<abs_type> *b = new std::unordered_set<abs_type>;
-            valid_joint_input.push_back(b);
-        }
+//        for (int i=0; i<no_states; i++) {
+//            std::unordered_set<abs_type> *a = new std::unordered_set<abs_type>;
+//            valid_input.push_back(a);
+//            std::unordered_set<abs_type> *b = new std::unordered_set<abs_type>;
+//            valid_joint_input.push_back(b);
+//        }
         for (int ic=0; ic<comp.no_states; ic++) {
             for (int ia=1; ia<no_assume_states; ia++) {
                 for (int ig=1; ig<no_guarantee_states; ig++) {
@@ -175,8 +179,8 @@ public:
                                 /* the post state tuple index */
                                 abs_type im2 = monitor_state_ind(*it,ia2,ig2,no_assume_states,no_guarantee_states);
                                 no_post[addr_xuw(im,j,k)]++;
-                                valid_input[im]->insert(j);
-                                valid_joint_input[im]->insert(addr_uw(j,k));
+//                                valid_input[im]->insert(j);
+//                                valid_joint_input[im]->insert(addr_uw(j,k));
                                 if (ia2!=0 && ig2!=0) {
                                     pre[addr_xuw(im2,j,k)]->push_back(im);
                                     post[addr_xuw(im,j,k)]->insert(im2);

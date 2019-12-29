@@ -39,6 +39,9 @@ public:
      * \param[in] allowed_inputs    vector of allowed inputs indexed using the component state indices */
     LivenessGame(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee, const std::unordered_set<abs_type> component_target_states, std::vector<std::unordered_set<abs_type>*> allowed_inputs) : Monitor(comp, assume, guarantee) {
         /* target states */
+        /* the assumption violation is always in target */
+        monitor_target_states_.insert(0);
+        /* derive the other target states from the component, assumption, and guarantee state indices */
         for (auto it=component_target_states.begin(); it!=component_target_states.end(); ++it) {
             for (abs_type j=1; j<no_assume_states; j++) {
                 for (abs_type k=1; k<no_guarantee_states; k++) {
@@ -46,20 +49,23 @@ public:
                 }
             }
         }
-        /* avoid states */
+        /* avoid state: the guarantee violation */
         monitor_avoid_states_.insert(1);
         /* allowed inputs */
         for (abs_type im=0; im<no_states; im++) {
             std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
+            /* for the sink, all inputs are allowed, and for the other states, the allowed inputs are derived from the allowed inputs for the respective component state */
             if (im==0 || im==1) {
-                allowed_inputs_.push_back(s);
+                for (abs_type j=0; j<no_control_inputs; j++) {
+                    s->insert(j);
+                }
             } else {
                 abs_type ic=component_state_ind(im);
                 for (auto l=allowed_inputs[ic]->begin(); l!=allowed_inputs[ic]->end(); ++l) {
                     s->insert(*l);
                 }
-                allowed_inputs_.push_back(s);
             }
+            allowed_inputs_.push_back(s);
         }
     }
     /*! Solve reach-avoid game, where the target is given by the local specification, and the "obstacle" is given by the reject_G (violation of guarantee) state.
@@ -142,9 +148,11 @@ public:
                 for (abs_type k=0; k<no_dist_inputs; k++) {
                     abs_type x2 = addr_xuw(x,j,k);
                     for (auto it=pre[x2]->begin(); it!=pre[x2]->end(); ++it) {
+                        /* if the pre state is in avoid, ignore */
                         if (monitor_avoid_states_.find(*it)!=monitor_avoid_states_.end()) {
                             continue;
                         }
+                        /* check the viability of the used control input */
                         if (allowed_inputs_[*it]->find(j)==allowed_inputs_[*it]->end()) {
                             continue;
                         }
@@ -194,13 +202,19 @@ public:
         for (abs_type i=0; i<no_states; i++) {
             YY.insert(i);
         }
-        /* set of valid inputs indexed by the state indices */
+        /* set of allowed inputs (control input when str=sure, joint input when str=maybe) indexed by the state indices */
         std::vector<std::unordered_set<abs_type>*> D;
         for (abs_type i=0; i<no_states; i++) {
             std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
             D.push_back(s);
             for (auto j=allowed_inputs_[i]->begin(); j!=allowed_inputs_[i]->end(); ++j) {
-                D[i]->insert(*j);
+                if (!strcmp(str,"sure")) {
+                    D[i]->insert(*j);
+                } else {
+                    for (abs_type k=0; k<no_dist_inputs; k++) {
+                        D[i]->insert(addr_uw(*j,k));
+                    }
+                }
             }
         }
         /* the inner mu variable */
@@ -241,14 +255,13 @@ public:
                     safe_targets.insert(*i);
                 }
             }
-            /* update the monitor target states */
-            for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); i++) {
-                if (safe_targets.find(*i)==safe_targets.end()) {
-                    monitor_target_states_.erase(*i);
-                }
-            }
+            /* create a new monitor with safe_targets as the true targets */
+            negotiation::LivenessGame monitor2(*this);
+            monitor2.monitor_target_states_=safe_targets;
+            /* solve reach_avoid_game on monitor2 */
             reach_win.clear();
-            reach_win=solve_reach_avoid_game(str);
+            reach_win=monitor2.solve_reach_avoid_game(str);
+            /* create a vector of the winning states in the reach_avoid game */
             XX.clear();
             for (abs_type i=0; i<no_states; i++) {
                 if (reach_win[i]->size()!=0) {
