@@ -1,0 +1,14 @@
+# Initial guarantee (different from the specification) for component 1 (Plant): TRUE
+NO_STATES (N, index 0=reject)
+2
+NO_INITIAL_STATES
+1
+INITIAL_STATE_LIST
+1
+NO_INPUTS (M, 0=nop2, 1=op2)
+2
+TRANSITION_POST (the set of post for state-control tuple (i,j) is stored in (i*M + j)-th row, where all the indices, including that of the row, start from 0)
+0
+0
+1
+1
