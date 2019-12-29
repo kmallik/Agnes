@@ -10,7 +10,6 @@
 #include <vector>
 #include <queue>
 
-//#include "FileHandler.hpp"
 #include "Component.hpp" /* for the definition of data types abs_type and abs_ptr_type */
 
 /** @namespace negotiation **/

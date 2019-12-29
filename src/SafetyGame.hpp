@@ -20,6 +20,7 @@ public:
     /*! constuctor: see <Monitor> **/
     using Monitor::Monitor;
     /*! Solve safety game.
+     *  The algorithm is taken from: https://gitlab.lrz.de/matthias/SCOTSv0.2/raw/master/manual/manual.pdf
      *
      * The state reject_A (ind=0) is safe but reject_G (ind=1) is unsafe by default.
      *
@@ -65,7 +66,7 @@ public:
             /* for maybe winning, D[i] contains the input indices from the joint control-internal disturbance input space */
             for (abs_type j=0; j<no_control_inputs; j++) {
                 for (abs_type k=0; k<no_dist_inputs; k++) {
-                    D[0]->insert(joint_action_ind(j,k));
+                    D[0]->insert(addr_uw(j,k));
                 }
             }
         }
@@ -95,7 +96,7 @@ public:
             Q.pop();
             for (int j=0; j<no_control_inputs; j++) {
                 for (int k=0; k<no_dist_inputs; k++) {
-                    abs_type x2 = addr_pre(x,j,k);
+                    abs_type x2 = addr_xuw(x,j,k);
                     for (std::vector<abs_type>::iterator it=pre[x2]->begin(); it!=pre[x2]->end(); ++it) {
                         /* remove all the control inputs from the pre-states of x which lead to x */
                         if (!strcmp(str,"sure")) {
@@ -103,7 +104,7 @@ public:
                             D[*it]->erase(j);
                         } else {
                             /* for maybe winning, remove the joint input */
-                            D[*it]->erase(joint_action_ind(j,k));
+                            D[*it]->erase(addr_uw(j,k));
                         }
                         if (D[*it]->size()==0 && !isMember<abs_type>(E,*it)) {
                             Q.push(*it);
@@ -202,7 +203,7 @@ public:
         for (int i=1; i<no_states; i++) {
             for (abs_type j=0; j<no_control_inputs; j++) {
                 for (abs_type k=0; k<no_dist_inputs; k++) {
-                    std::vector<abs_type> p=*pre[addr_pre(i,j,k)];
+                    std::vector<abs_type> p=*pre[addr_xuw(i,j,k)];
                     for (int l=0; l<p.size(); l++) {
                         post[addr_post(p[l],j,k)]->insert(i);
                     }
@@ -252,7 +253,7 @@ public:
                     /* if all disturbance inputs lead to losing states, then ignore this control input (non-admissible) */
                     bool admissible=false;
                     for (abs_type k=0; k<no_dist_inputs; k++) {
-                        if (maybe_win[i]->find(joint_action_ind(j,k)) != maybe_win[i]->end()) {
+                        if (maybe_win[i]->find(addr_uw(j,k)) != maybe_win[i]->end()) {
                             /* the joint action is in the maybe winning strategy */
                             admissible=true;
                             break;
@@ -263,7 +264,7 @@ public:
                     }
                     /* iterate over all the disturbance inputs */
                     for (abs_type k=0; k<no_dist_inputs; k++) {
-                        if (maybe_win[i]->find(joint_action_ind(j,k)) != maybe_win[i]->end()) {
+                        if (maybe_win[i]->find(addr_uw(j,k)) != maybe_win[i]->end()) {
                             /* iterate over all the post states */
                             for (auto it2=post[addr_post(i,j,k)]->begin(); it2!=post[addr_post(i,j,k)]->end(); it2++) {
                                 arr2[addr(ind,k)]->insert(new_state_ind[*it2]);

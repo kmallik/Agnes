@@ -228,7 +228,6 @@ public:
             spoilers_mini_->resetPost();
             computeMiniTransitions();
         }
-//        spoilers_mini_->determinize();
     }
 }; /* end of class definition */
 } /* end of namespace negotiation */
