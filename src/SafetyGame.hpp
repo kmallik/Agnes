@@ -118,8 +118,8 @@ public:
         return D;
     }
     /*! Generate the spoiling behavior as a safety automaton and write to a file.
-     * \param[in] sure_win    maybe winning state-joint input pairs
-     * \param[in] maybe_win maybe winning state-control input pairs
+     * \param[in] sure_win    sure winning state-control input pairs
+     * \param[in] maybe_win maybe winning state-join input pairs
      * \param[in] file        filename for storing the safety automaton
      * \param[out] true/false   false when some initial state is sure losing, true otherwise.
      */
@@ -184,7 +184,10 @@ public:
         }
         /* construct the full safety automaton capturing the set of spoiling behaviors */
         spoilers.no_states_=no_new_states;
-        spoilers.init_=init_;
+//        spoilers.init_=init_;
+        for (auto i=init_.begin(); i!=init_.end(); ++i) {
+            spoilers.init_(new_state_ind[i]);
+        }
         spoilers.no_inputs_=no_dist_inputs;
         /* construct the post transition array of the original transition systems */
         std::unordered_set<abs_type>** post=new std::unordered_set<abs_type>*[no_states*no_control_inputs*no_dist_inputs];

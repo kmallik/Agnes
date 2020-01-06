@@ -85,10 +85,10 @@ public:
     }
     /* Destructor */
     ~Monitor() {
-        for (int i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
-            delete pre[i];
-            delete post[i];
-        }
+//        for (int i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
+//            delete pre[i];
+//            delete post[i];
+//        }
 //        for (int i=0; i<no_states; i++) {
 //            delete valid_input[i];
 //            delete valid_joint_input[i];
@@ -207,6 +207,40 @@ public:
             }
         }
     }
+    /*! Compue the set of states reachable from the initial states */
+    std::unordered_set<abs_type> reachable_set() {
+        /* the queue of states whose successors are to be explored */
+        std::queue<abs_type> fifo;
+        /* states already seen */
+        std::unordered_set<abs_type> seen;
+        /* initialize the queue and seen with the set of initial states */
+        for (auto i=init_.begin(); i!=init_.end(); ++i) {
+            fifo.push(*i);
+            seen.insert(*i);
+        }
+        /* until no new states are found */
+        while (fifo.size()!=0) {
+            /* pop the front element */
+            abs_type i = fifo.front();
+            fifo.pop();
+            /* add all the successors of i to the queue */
+            for (abs_type j=0; j<no_control_inputs; j++) {
+                for (abs_type k=0; k<no_dist_inputs; k++) {
+                    /* address in the post array */
+                    abs_type post_addr = addr_xuw(i,j,k);
+                    for (auto i2=post[post_addr]->begin(); i2!=post[post_addr]->end(); ++i2) {
+                        /* if the state i2 is not seen, then add i2 to the queue and seen */
+                        if (seen.find(*i2)==seen.end()) {
+                            fifo.push(*i2);
+                            seen.insert(*i2);
+                        }
+                    }
+                }
+            }
+        }
+        /* the set seen is the set of reachable states */
+        return seen;
+    }
     /*! Index of state-control input-disturbance input pair.
      * \param[in] i           state index
      * \param[in] j           control input index
@@ -228,6 +262,13 @@ public:
      * \param[out] ind    address **/
     inline int addr_xu(const abs_type i, const abs_type j) {
         return (i*no_control_inputs + j);
+    }
+    /*! Index of state-control input pair.
+     * \param[in] i           state index
+     * \param[in] k           disturbance input index
+     * \param[out] ind    address **/
+    inline int addr_xw(const abs_type i, const abs_type k) {
+        return (i*no_dist_inputs + k);
     }
     /*! Index of monitor state from component state
      * \param[in] im         component state index

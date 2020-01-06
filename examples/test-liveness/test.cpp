@@ -48,7 +48,7 @@ int main() {
     std::vector<std::unordered_set<negotiation::abs_type>*> sure_win=monitor.solve_liveness_game("sure");
     std::vector<std::unordered_set<negotiation::abs_type>*> maybe_win=monitor.solve_liveness_game("maybe");
     
-//    monitor.find_spoilers(sure_win, maybe_win, "Outputs/spoilers1.txt");
+    bool out=monitor.find_spoilers("Outputs/spoilers1.txt");
 //
 //    /* read the spoiler automaton */
 //    negotiation::SafetyAutomaton spoiler_full;
