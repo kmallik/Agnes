@@ -121,6 +121,12 @@ public:
     inline int addr(const abs_type i, const abs_type j, const abs_type k) {
         return (i*no_control_inputs*no_dist_inputs + j*no_dist_inputs + k);
     }
+    /*! Index of the control input from a joint control-disturbance index.
+     * \param[in] l             joint control-disturbance input index
+     * \param[out] j           control input index */
+    inline abs_type cont_ind(const abs_type l) {
+        return (l / no_dist_inputs);
+    }
 };
 
 } /* end of namespace negotiation */

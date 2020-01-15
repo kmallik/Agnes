@@ -17,8 +17,9 @@ namespace negotiation {
  */
 class SafetyGame: public Monitor {
 public:
-    /*! constuctor: see <Monitor> **/
-    using Monitor::Monitor;
+//    /*! constuctor: see <Monitor> **/
+//    using Monitor::Monitor;
+    SafetyGame(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee) : Monitor(comp, assume, guarantee) {}
     /*! Solve safety game.
      *  The algorithm is taken from: https://gitlab.lrz.de/matthias/SCOTSv0.2/raw/master/manual/manual.pdf
      *
@@ -41,7 +42,7 @@ public:
         for (auto it=component_safe_states.begin(); it!=component_safe_states.end(); ++it) {
             for (abs_type j=1; j<no_assume_states; j++) {
                 for (abs_type k=1; k<no_guarantee_states; k++) {
-                    monitor_safe_states.insert(state_ind(*it,j,k,no_assume_states,no_guarantee_states));
+                    monitor_safe_states.insert(monitor_state_ind(*it,j,k,no_assume_states,no_guarantee_states));
                 }
             }
         }
@@ -73,19 +74,28 @@ public:
         
         /* initialize Q, E, D for all the states other than 0,1 */
         for (int i=2; i<no_states; i++) {
-            if (!isMember<abs_type>(monitor_safe_states,i) || no_post[i]==0) {
+            if (!isMember<abs_type>(monitor_safe_states,i) || isDeadEnd(i)) {
                 Q.push(i);
                 E.insert(i);
             } else {
                 if (!strcmp(str,"sure")) {
-                    /* for sure winning, D[i] only contains the winning control inputs from state i */
-                    for (std::unordered_set<abs_type>::iterator it=valid_input[i]->begin(); it!=valid_input[i]->end(); ++it) {
-                        D[i]->insert(*it);
+                    /* for sure winning, D[i] initially contains all the inputs for which there is some successor */
+                    for (abs_type j=0; j<no_control_inputs; j++) {
+                        for (abs_type k=0; k<no_dist_inputs; k++) {
+                            if (no_post[addr_xuw(i,j,k)]!=0) {
+                                D[i]->insert(j);
+                                break;
+                            }
+                        }
                     }
                 } else {
-                    /* for maybe winning, D[i] contains the input indices from the joint control-internal disturbance input space */
-                    for (std::unordered_set<abs_type>::iterator it=valid_joint_input[i]->begin(); it!=valid_joint_input[i]->end(); ++it) {
-                        D[i]->insert(*it);
+                    /* for maybe winning, D[i] initially contains all the joint input indices for which there is some successor */
+                    for (abs_type j=0; j<no_control_inputs; j++) {
+                        for (abs_type k=0; k<no_dist_inputs; k++) {
+                            if (no_post[addr_xuw(i,j,k)]!=0) {
+                                D[i]->insert(addr_uw(j,k));
+                            }
+                        }
                     }
                 }
             }
@@ -120,12 +130,14 @@ public:
     /*! Generate the spoiling behavior as a safety automaton and write to a file.
      * \param[in] sure_win    sure winning state-control input pairs
      * \param[in] maybe_win maybe winning state-join input pairs
-     * \param[in] file        filename for storing the safety automaton
-     * \param[out] true/false   false when some initial state is sure losing, true otherwise.
+     * \param[in] spoilers        the safety automaton storing the spoiling behaviors
+     * \param[out] out_flag   0 -> some initial states are sure losing, 2 -> all initial states are sure winning, 1-> otherwise. For out_flag=0,2, spoilers is an automaton that accepts all strings.
      */
-    bool find_spoilers(const std::vector<std::unordered_set<negotiation::abs_type>*>& sure_win, const std::vector<std::unordered_set<negotiation::abs_type>*>& maybe_win, const std::string& filename) {
-        /* cretae the spoiler safety automaton */
-        negotiation::SafetyAutomaton spoilers;
+    int find_spoilers(const std::vector<std::unordered_set<negotiation::abs_type>*>& sure_win, const std::vector<std::unordered_set<negotiation::abs_type>*>& maybe_win, negotiation::SafetyAutomaton* spoilers) {
+        /* the output flag */
+        int out_flag;
+//        /* cretae the spoiler safety automaton */
+//        negotiation::SafetyAutomaton spoilers;
         /* if all the initial states are sure winning, then the set of spoiling behaviors is empty */
         bool allInitSureWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
@@ -135,22 +147,11 @@ public:
             }
         }
         if (allInitSureWinning) {
-            /* the safety automaton accepts all strings */
-            spoilers.no_states_=2;
-            spoilers.init_.insert(1);
-            spoilers.no_inputs_=no_dist_inputs;
-            std::unordered_set<abs_type>** post=new std::unordered_set<abs_type>*[2*no_dist_inputs];
-            for (int i=0; i<2; i++) {
-                for (int j=0; j<no_dist_inputs; j++) {
-                    std::unordered_set<abs_type> *v=new std::unordered_set<abs_type>;
-                    v->insert(i);
-                    post[addr(i,j)]=v;
-                }
-            }
-            spoilers.addPost(post);
-            delete[] post;
-            spoilers.writeToFile(filename);
-            return true;
+            /* spoilers is a safety automaton that accepts all strings */
+            negotiation::SafetyAutomaton safe_all(no_dist_inputs);
+            *spoilers = safe_all;
+            out_flag=2;
+            return out_flag;
         }
         /* if not all the initial states are maybe winning, then no negotiation is possible: return false */
         bool allInitMaybeWinning=true;
@@ -161,7 +162,11 @@ public:
             }
         }
         if (!allInitMaybeWinning) {
-            return false;
+            /* spoilers is a safety automaton that accepts all strings (the game is surely losing, so the other component does not have any extra effect on spoiling the game) */
+            negotiation::SafetyAutomaton safe_all(no_dist_inputs);
+            *spoilers = safe_all;
+            out_flag=0;
+            return out_flag;
         }
         /* map from old state indices to new state indices: all the losing states (i.e. no maybe winning) are lumped in state 0 */
         std::vector<abs_type> new_state_ind;
@@ -183,12 +188,12 @@ public:
             }
         }
         /* construct the full safety automaton capturing the set of spoiling behaviors */
-        spoilers.no_states_=no_new_states;
+        spoilers->no_states_=no_new_states;
 //        spoilers.init_=init_;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
-            spoilers.init_(new_state_ind[i]);
+            spoilers->init_.insert(new_state_ind[*i]);
         }
-        spoilers.no_inputs_=no_dist_inputs;
+        spoilers->no_inputs_=no_dist_inputs;
         /* construct the post transition array of the original transition systems */
         std::unordered_set<abs_type>** post=new std::unordered_set<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
         for (abs_type i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
@@ -281,14 +286,15 @@ public:
                 ind++;
             }
         }
-        spoilers.addPost(arr2);
-        spoilers.writeToFile(filename);
+        spoilers->addPost(arr2);
+//        spoilers.writeToFile(filename);
  
         delete[] post;
         delete[] arr2;
         
-        /* successfully generated a spoiling automaton: return true */
-        return true;
+        /* successfully generated a spoiling automaton: return out_flag=1 */
+        out_flag=1;
+        return out_flag;
     }
 private:
     /*! Address of post in post array.
@@ -311,6 +317,18 @@ private:
      * \param[out] j           disturbance input index */
     inline abs_type dist_ind(const abs_type l) {
         return (l % no_dist_inputs);
+    }
+    /*! Check if a given monitor state is a dead-end.
+     * \param[in] i     state index*/
+    bool isDeadEnd(const abs_type i) {
+        for (abs_type j=0; j<no_control_inputs; j++) {
+            for (abs_type k=0; k<no_control_inputs; k++) {
+                if (no_post[addr_xuw(i,j,k)]!=0) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
     
 };/* end of class definition */

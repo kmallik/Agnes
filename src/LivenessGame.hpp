@@ -273,11 +273,12 @@ public:
         return reach_win;
     }
     /*! compute the set of spoiling behaviors in the form of a safety automaton.
-     * \param[in] file          filename for storing the safety automaton
-     * \param[out] true/false   false when some initial state is sure losing, true otherwise. */
-    bool find_spoilers(const std::string& filename) {
-        /* create the spoiler safety automaton */
-        negotiation::SafetyAutomaton spoilers;
+     * \param[in] spoilers          pointer to the safety automaton saving the spoiling behaviors
+     * \param[out] out_flag        0 -> some initial states are sure losing, 2 -> all initial states are sure winning, 1-> otherwise. */
+    int find_spoilers(negotiation::SafetyAutomaton* spoilers) {
+        int out_flag;
+//        /* create the spoiler safety automaton */
+//        negotiation::SafetyAutomaton spoilers;
         /* solve the liveness game with sure semantics */
         std::vector<unordered_set<abs_type>*> sure_win = solve_liveness_game("sure");
         /* if all the initial states are sure winning, then the set of spoiling behaviors is empty */
@@ -289,22 +290,11 @@ public:
             }
         }
         if (allInitSureWinning) {
-            /* the safety automaton accepts all strings */
-            spoilers.no_states_=2;
-            spoilers.init_.insert(1);
-            spoilers.no_inputs_=no_dist_inputs;
-            std::unordered_set<abs_type>** p=new std::unordered_set<abs_type>*[2*no_dist_inputs];
-            for (int i=0; i<2; i++) {
-                for (int k=0; k<no_dist_inputs; k++) {
-                    std::unordered_set<abs_type> *v=new std::unordered_set<abs_type>;
-                    v->insert(i);
-                    p[addr_xw(i,k)]=v;
-                }
-            }
-            spoilers.addPost(p);
-            delete[] p;
-            spoilers.writeToFile(filename);
-            return true;
+            /* spoilers is a safety automaton that accepts all strings */
+            negotiation::SafetyAutomaton safe_all(no_dist_inputs);
+            *spoilers = safe_all;
+            out_flag=2;
+            return out_flag;
         }
         /* solve the liveness game with maybe semantics */
         std::vector<unordered_set<abs_type>*> maybe_win = solve_liveness_game("maybe");
@@ -317,7 +307,8 @@ public:
             }
         }
         if (!allInitMaybeWinning) {
-            return false;
+            out_flag=0;
+            return out_flag;
         }
         /* compute the set of states reachable from the intitial states */
         std::unordered_set<abs_type> R = reachable_set();
@@ -469,15 +460,15 @@ public:
         }
         /* construct the full safety automaton capturing the set of spoiling behaviors */
         abs_type no_new_states=old_state_ind.size();
-        spoilers.no_states_=no_new_states;
+        spoilers->no_states_=no_new_states;
 //        spoilers.init_=init_; /* CHECK THIS: ALSO IN SAFETY */
         for (abs_type i=0; i<no_new_states; i++) {
             abs_type q=old_state_ind[i];
             if (init_.find(q)!=init_.end()) {
-                spoilers.init_.insert(i);
+                spoilers->init_.insert(i);
             }
         }
-        spoilers.no_inputs_=no_dist_inputs;
+        spoilers->no_inputs_=no_dist_inputs;
         /* construct the post transition array of the safety automaton */
         std::unordered_set<abs_type>** p=new std::unordered_set<abs_type>*[no_new_states*no_dist_inputs];
         for (abs_type i=0; i<no_new_states*no_dist_inputs; i++) {
@@ -506,9 +497,9 @@ public:
                 }
             }
         }
-        spoilers.addPost(p);
-        /* write the spoilers automaton to file */
-        spoilers.writeToFile(filename);
+        spoilers->addPost(p);
+//        /* write the spoilers automaton to file */
+//        spoilers.writeToFile(filename);
         /* restore post, no_post, monitor_target_states_*/
         monitor_target_states_=monitor_target_states_old;
         for (abs_type l=0; l<no_states*no_control_inputs*no_dist_inputs; l++) {
@@ -521,7 +512,8 @@ public:
         delete[] p;
         delete[] post_old;
         
-        return true;
+        out_flag=1;
+        return out_flag;
     }
     /*! Find pairs of state-disturbance input (x,w1) s.t.:
      *      - x is in W1

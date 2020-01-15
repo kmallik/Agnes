@@ -48,16 +48,17 @@ int main() {
     std::vector<std::unordered_set<negotiation::abs_type>*> sure_win=monitor.solve_liveness_game("sure");
     std::vector<std::unordered_set<negotiation::abs_type>*> maybe_win=monitor.solve_liveness_game("maybe");
     
-    bool out=monitor.find_spoilers("Outputs/spoilers1.txt");
-//
-//    /* read the spoiler automaton */
+    negotiation::SafetyAutomaton* spoiler_full = new negotiation::SafetyAutomaton;
+    bool out=monitor.find_spoilers(spoiler_full);
+    
+    /* read the spoiler automaton */
 //    negotiation::SafetyAutomaton spoiler_full;
 //    spoiler_full.readFromFile("Outputs/spoilers1.txt");
-//    negotiation::Spoilers s1(&spoiler_full);
-//    s1.boundedBisim(1);
-//    s1.spoilers_mini_->writeToFile("Outputs/spoilers_mini1.txt");
-//    s1.spoilers_mini_->determinize();
-//    s1.spoilers_mini_->writeToFile("Outputs/spoilers_mini_det1.txt");
+    negotiation::Spoilers s1(spoiler_full);
+    s1.boundedBisim(1);
+    s1.spoilers_mini_->writeToFile("Outputs/spoilers_mini1.txt");
+    s1.spoilers_mini_->determinize();
+    s1.spoilers_mini_->writeToFile("Outputs/spoilers_mini_det1.txt");
     
     return 1;
 }
