@@ -1,0 +1,9 @@
+# NO_TARGET_STATES:
+6
+# SET_SAFE_STATES:
+0
+1
+2
+3
+4
+5
