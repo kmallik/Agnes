@@ -42,7 +42,9 @@ public:
         no_inputs_=other.no_inputs_;
         post_ = new std::unordered_set<abs_type>*[no_states_*no_inputs_];
         for (int i=0; i<no_states_*no_inputs_; i++) {
-            post_[i]=other.post_[i];
+            std::unordered_set<abs_type>* p=new std::unordered_set<abs_type>;
+            *p=*other.post_[i];
+            post_[i]=p;
         }
     }
     /*! Default constructor */
@@ -126,6 +128,19 @@ public:
 //    bool isEmpty() {
 //
 //    }
+    /*! the equality operator creates new array for post_ */
+    SafetyAutomaton& operator=(const SafetyAutomaton& other) {
+        no_states_=other.no_states_;
+        init_=other.init_;
+        no_inputs_=other.no_inputs_;
+        post_ = new std::unordered_set<abs_type>*[no_states_*no_inputs_];
+        for (int i=0; i<no_states_*no_inputs_; i++) {
+            std::unordered_set<abs_type>* p=new std::unordered_set<abs_type>;
+            *p=*other.post_[i];
+            post_[i]=p;
+        }
+        return *this;
+    }
     /* read description of states and transitions from files */
     void readFromFile(const string& filename) {
         int result = readMember<abs_type>(filename, no_states_, "NO_STATES");

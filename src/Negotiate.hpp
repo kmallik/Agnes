@@ -147,14 +147,14 @@ public:
             out_flag=0;
             return out_flag;
         }
-        /* debugging */
-        spoilers_safety->writeToFile("Outputs/interim.txt");
-        /* end of debugging */
+//        /* debugging */
+//        spoilers_safety->writeToFile("Outputs/interim.txt");
+//        /* end of debugging */
         spoilers_safety->determinize();
         /* find the spoilers for the liveness part (with the strategies being already restricted by the strategy obtained during the synthesis of the maybe safety controller) */
         SafetyAutomaton* spoilers_liveness = new SafetyAutomaton;
         std::vector<std::unordered_set<abs_type>*> allowed_inputs;
-        for (abs_type i=0; i<components_[c]->no_states; i++) {
+        for (abs_type i=0; i<monitor.no_states; i++) {
             std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
             for (auto j=sure_safe[i]->begin(); j!=sure_safe[i]->end(); ++j) {
                 s->insert(*j);
@@ -172,6 +172,9 @@ public:
             out_flag=0;
             return out_flag;
         }
+        /* debug */
+        spoilers_liveness->writeToFile("Outputs/interimset.txt");
+        /* debug ends */
         spoilers_liveness->determinize();
         /* the overall spoiling behavior is the union of spoiling behavior for the safety spec and the liveness spec, or the overall non-spoiling behavior is the intersection of non-spoilers for safety AND non-spoilers for liveness */
         SafetyAutomaton spoilers_overall(*spoilers_safety, *spoilers_liveness);
