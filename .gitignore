@@ -1,32 +1,29 @@
-# Prerequisites
-*.d
+# Extension-less executables #
+##############################
+*
+!*.*
+!*/
+!Makefile
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# Compiled source #
+###################
+*~
+*.dSYM
 
-# Precompiled Headers
-*.gch
-*.pch
+# Miscellaneous #
+#################
+.*
+*.swp
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
