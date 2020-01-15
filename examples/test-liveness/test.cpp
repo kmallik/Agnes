@@ -33,7 +33,7 @@ int main() {
     assume.readFromFile("Inputs/assume.txt");
     negotiation::SafetyAutomaton guarantee;
     guarantee.readFromFile("Inputs/guarantee.txt");
-    
+
     /* the liveness game */
     std::unordered_set<negotiation::abs_type> target_states = {5};
     /* allowed inputs */
@@ -43,22 +43,23 @@ int main() {
         s->insert(0);
         allowed_inputs.push_back(s);
     }
-    
+
     negotiation::LivenessGame monitor(c,assume,guarantee,target_states,allowed_inputs);
     std::vector<std::unordered_set<negotiation::abs_type>*> sure_win=monitor.solve_liveness_game("sure");
     std::vector<std::unordered_set<negotiation::abs_type>*> maybe_win=monitor.solve_liveness_game("maybe");
-    
+
     negotiation::SafetyAutomaton* spoiler_full = new negotiation::SafetyAutomaton;
     bool out=monitor.find_spoilers(spoiler_full);
-    
+
     /* read the spoiler automaton */
 //    negotiation::SafetyAutomaton spoiler_full;
 //    spoiler_full.readFromFile("Outputs/spoilers1.txt");
     negotiation::Spoilers s1(spoiler_full);
     s1.boundedBisim(1);
+    checkMakeDir("Outputs");
     s1.spoilers_mini_->writeToFile("Outputs/spoilers_mini1.txt");
     s1.spoilers_mini_->determinize();
     s1.spoilers_mini_->writeToFile("Outputs/spoilers_mini_det1.txt");
-    
+
     return 1;
 }

@@ -12,6 +12,7 @@
 
 #include "Component.hpp" /* for the definition of data types abs_type and abs_ptr_type */
 //#include "FileHandler.hpp"
+#include "LivenessGame.hpp"
 
 /** @namespace negotiation **/
 namespace negotiation {
@@ -137,15 +138,18 @@ public:
         int out_flag;
         /* find the spoilers for the safety part */
         negotiation::SafetyGame monitor(*components_[c],*guarantee_[1-c],*guarantee_[c]);
-        std::vector<std::unordered_set<abs_type>*> sure_safe = monitor.solve_safety_game(safe_states_[c],"sure");
-        std::vector<std::unordered_set<abs_type>*> maybe_safe = monitor.solve_safety_game(safe_states_[c],"maybe");
+        std::vector<std::unordered_set<abs_type>*> sure_safe = monitor.solve_safety_game(*safe_states_[c],"sure");
+        std::vector<std::unordered_set<abs_type>*> maybe_safe = monitor.solve_safety_game(*safe_states_[c],"maybe");
         SafetyAutomaton* spoilers_safety = new SafetyAutomaton;
         int flag1 = monitor.find_spoilers(sure_safe, maybe_safe, spoilers_safety);
         /* if some initial states are surely losing the safety specification, then return out_flag=0 */
-        if (flag==0) {
+        if (flag1==0) {
             out_flag=0;
             return out_flag;
         }
+        /* debugging */
+        spoilers_safety->writeToFile("Outputs/interim.txt");
+        /* end of debugging */
         spoilers_safety->determinize();
         /* find the spoilers for the liveness part (with the strategies being already restricted by the strategy obtained during the synthesis of the maybe safety controller) */
         SafetyAutomaton* spoilers_liveness = new SafetyAutomaton;
@@ -161,7 +165,7 @@ public:
             }
             allowed_inputs.push_back(s);
         }
-        negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], target_states_[c], allowed_inputs);
+        negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], allowed_inputs);
         int flag2 = monitor_live.find_spoilers(spoilers_liveness);
         /* if some initial states are surely losing the liveness specification, then return false */
         if (flag2==0) {
@@ -170,9 +174,9 @@ public:
         }
         spoilers_liveness->determinize();
         /* the overall spoiling behavior is the union of spoiling behavior for the safety spec and the liveness spec, or the overall non-spoiling behavior is the intersection of non-spoilers for safety AND non-spoilers for liveness */
-        SafetyAutomaton spoilers_overall(spoilers_safety, spoilers_liveness);
+        SafetyAutomaton spoilers_overall(*spoilers_safety, *spoilers_liveness);
         spoilers_overall.trim();
-        
+
         /* copy the overall spoiling behavior to the one supplied as input for storing the spoiling behaviors */
         *spoilers=spoilers_overall;
         /* if both the safety and the liveness games are sure winning, then return out_flag=2, else return out_flag=1 */

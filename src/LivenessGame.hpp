@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <queue>
+#include <limits>
 
 #include "Component.hpp" /* for the definition of data types abs_type and abs_ptr_type */
 
@@ -437,7 +438,7 @@ public:
         }
         /* find the reachable states using the updated post */
         R = reachable_set();
-        
+
         /* construct the spoilers safety automaton */
         /* map from new state indices to old state indices: all the losing states (i.e. no maybe winning) are lumped in state 0 */
         std::vector<abs_type> old_state_ind;
@@ -511,7 +512,7 @@ public:
         no_post=no_post_old;
         delete[] p;
         delete[] post_old;
-        
+
         out_flag=1;
         return out_flag;
     }
@@ -573,7 +574,7 @@ public:
             }
         }
         return bad_pairs;
-    
+
     }
 }; /* end of class definition */
 } /* end of namespace negotiation */

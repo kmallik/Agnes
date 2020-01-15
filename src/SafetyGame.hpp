@@ -7,9 +7,13 @@
 #ifndef SAFETYGAME_HPP_
 #define SAFETYGAME_HPP_
 
+#include <cstring>
+
 
 /** @namespace negotiation **/
 namespace negotiation {
+
+using namespace std;
 /**
  *  @class SafetyGame
  *
@@ -71,7 +75,7 @@ public:
                 }
             }
         }
-        
+
         /* initialize Q, E, D for all the states other than 0,1 */
         for (int i=2; i<no_states; i++) {
             if (!isMember<abs_type>(monitor_safe_states,i) || isDeadEnd(i)) {
@@ -288,10 +292,10 @@ public:
         }
         spoilers->addPost(arr2);
 //        spoilers.writeToFile(filename);
- 
+
         delete[] post;
         delete[] arr2;
-        
+
         /* successfully generated a spoiling automaton: return out_flag=1 */
         out_flag=1;
         return out_flag;
@@ -330,7 +334,7 @@ private:
         }
         return true;
     }
-    
+
 };/* end of class definition */
 }/* end of namespace */
 

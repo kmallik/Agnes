@@ -9,10 +9,27 @@
 #include <locale>
 #include <vector>
 #include <unordered_set>
+#include <dirent.h>
+#include <sys/stat.h>
 
 /**
  *  @brief Some basic operations for reading inputs and writing output.
  */
+
+ /*! Ensures that a specified subdirectory exists.
+  *  \param[in]  dirName     Name of the desired subdirectory.
+  */
+ template <class dir_type>
+ void checkMakeDir(dir_type dirName) {
+     DIR* dir = opendir(dirName);
+     if (dir) {
+         closedir(dir);
+     }
+     else if (ENOENT == errno) {
+         int result = mkdir(dirName, 0777);
+         (void) result;
+     }
+ }
 
 template<class T>
 int readMember(const std::string& filename, T& member_value, const std::string& member_name) {
@@ -138,7 +155,7 @@ int readSet(const std::string& filename, std::unordered_set<T>& s, size_t no_ele
                         }
                     } else {
                         try {
-                            throw std::runtime_error("FileHandler:readSec: Unable to read set.");
+                            throw std::runtime_error("FileHandler:readSet: Unable to read set.");
                         } catch (std::exception &e) {
                             std::cout << e.what() << "\n";
                             return 0;
@@ -151,14 +168,14 @@ int readSet(const std::string& filename, std::unordered_set<T>& s, size_t no_ele
         }
         /* while loop exited and the set was not found */
         try {
-            throw std::runtime_error("FileHandler:readSec: Set not found.");
+            throw std::runtime_error("FileHandler:readSet: Set not found.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
             return 0;
         }
     } else {
         try {
-            throw std::runtime_error("FileHandler:readSec: Unable to open input file.");
+            throw std::runtime_error("FileHandler:readSet: Unable to open input file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
             return 0;
@@ -201,7 +218,7 @@ int readVecArr(const std::string& filename, std::vector<std::array<T,SIZE>>& v, 
                             std::cout << e.what() << "\n";
                             return 0;
                         }
-                        
+
                     }
                 }
                 file.close();
