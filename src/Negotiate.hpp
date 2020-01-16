@@ -95,6 +95,13 @@ public:
             if (success) {
                 return true;
             } else {
+                /* reset the sets of guarantees */
+                /* initialize the sets of guarantees as all accepting safety automata */
+                for (int c=0; c<2; c++) {
+                    negotiation::SafetyAutomaton* s=new negotiation::SafetyAutomaton(components_[c]->no_outputs);
+                    guarantee_.push_back(s);
+                }
+                /* increment k and continue the search */
                 k++;
             }
         }
@@ -119,6 +126,9 @@ public:
         /* end of debugging */
         negotiation::SafetyAutomaton* s = new negotiation::SafetyAutomaton();
         int flag = compute_spoilers_overall(c,s);
+        /* debug */
+        s->writeToFile("Outputs/interim_overall_det.txt");
+        /* debug ends */
         if (flag==0) {
             /* when the game is sure losing for component c, the negotiation fails */
             std::cout << "\tThe game is sure losing for component " << c << ". The negotiation failed. Terminating the process." << '\n';
@@ -136,8 +146,14 @@ public:
             std::cout << "\tComputing spoilers for component " << c << "." << '\n';
             negotiation::Spoilers spoiler(s);
             spoiler.boundedBisim(k);
+            /* debug */
+            spoiler.spoilers_mini_->writeToFile("Outputs/interim_overall_mini.txt");
+            /* debug ends */
             negotiation::SafetyAutomaton guarantee_updated(*guarantee_[1-c],*spoiler.spoilers_mini_);
             *guarantee_[1-c]=guarantee_updated;
+            /* debug */
+            guarantee_[1-c]->writeToFile("Outputs/interim_updated_guarantee.txt");
+            /* debug ends */
             bool flag2 = recursive_negotiation(k,1-c,0);
             if (flag2) {
                 return true;
@@ -155,6 +171,9 @@ public:
         int out_flag;
         /* find the spoilers for the safety part */
         negotiation::SafetyGame monitor(*components_[c],*guarantee_[1-c],*guarantee_[c]);
+        /* debug */
+        monitor.writeToFile("Outputs/monitor.txt");
+        /* debug end */
         std::vector<std::unordered_set<abs_type>*> sure_safe = monitor.solve_safety_game(*safe_states_[c],"sure");
         std::vector<std::unordered_set<abs_type>*> maybe_safe = monitor.solve_safety_game(*safe_states_[c],"maybe");
         SafetyAutomaton* spoilers_safety = new SafetyAutomaton;

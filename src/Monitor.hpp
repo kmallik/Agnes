@@ -331,6 +331,18 @@ public:
             return true;
         }
     }
+    /*! (Over-)write the monitor automaton to a file */
+    void writeToFile(const string& filename) {
+        create(filename);
+        writeMember(filename, "NO_STATES", no_states);
+        writeMember(filename, "NO_INITIAL_STATES", init_.size());
+        writeSet(filename, "INITIAL_STATE_LIST", init_);
+        writeMember<abs_type>(filename, "NO_ASSUME_STATES", no_assume_states);
+        writeMember<abs_type>(filename, "NO_GUARANTEE_STATES", no_guarantee_states);
+        writeMember<abs_type>(filename, "NO_CONTROL_INPUTS", no_control_inputs);
+        writeMember<abs_type>(filename, "NO_DIST_INPUTS", no_dist_inputs);
+        writeArrSet(filename,"TRANSITION_POST",post, no_states*no_control_inputs*no_dist_inputs);
+    }
 };/* end of class defintions*/
 }/* end of namespace negotiation */
 #endif
