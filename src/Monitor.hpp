@@ -293,28 +293,31 @@ public:
     }
     /*! Index of component state from monitor state
      * \param[in] ic         component state index
-     * \param[in] ia         assumption automaton state index, not equal to 0
-     * \param[in] ig         guarantee automaton state index, not equal to 0
+     * \param[in] ia         assumption automaton state index
+     * \param[in] ig         guarantee automaton state index
      * \param[in] na        no. of states of assumption automaton
      * \param[in] ng        no. of states of guarantee automaton
      * \param[out] im       monitor state index **/
     inline abs_type monitor_state_ind(const abs_type ic, const abs_type ia, const abs_type ig, const abs_type na, const abs_type ng) {
-        /* sanity check */
-        if (ia==0) {
-            try {
-                throw std::domain_error("Monitor:monitor_state_ind: The reject state (with index 0) of the assumption automaton should be excluded while constructing the product space of the monitor.\n");
-            } catch (std::exception& e) {
-                std::cout << e.what();
-            }
-        }
+        // /* sanity check */
+        /* violation of guarantee has higher priority than the violation of assumption (strong satisfaction of contract) */
         if (ig==0) {
-            try {
-                throw std::domain_error("Monitor:monitor_state_ind: The reject state (with index 0) of the guarantee automaton should be excluded while constructing the product space of the monitor.\n");
-            } catch (std::exception& e) {
-                std::cout << e.what();
-            }
+            return 1;
+            // try {
+            //     throw std::domain_error("Monitor:monitor_state_ind: The reject state (with index 0) of the guarantee automaton should be excluded while constructing the product space of the monitor.\n");
+            // } catch (std::exception& e) {
+            //     std::cout << e.what();
+            // }
+        } else if (ia==0) {
+            return 0;
+            // try {
+            //     throw std::domain_error("Monitor:monitor_state_ind: The reject state (with index 0) of the assumption automaton should be excluded while constructing the product space of the monitor.\n");
+            // } catch (std::exception& e) {
+            //     std::cout << e.what();
+            // }
+        } else {
+            return (ic*(na-1)*(ng-1) + (ia-1)*(ng-1) + (ig-1) + 2); /* the -1 with ia and ig are to shift all the ia and ig indeces leftwards, since the reject state is not used in the product. the +2 in the end is to make sure that reject states of the monitor 0,1 are indeed reserved. */
         }
-        return (ic*(na-1)*(ng-1) + (ia-1)*(ng-1) + (ig-1) + 2); /* the -1 with ia and ig are to shift all the ia and ig indeces leftwards, since the reject state is not used in the product. the +2 in the end is to make sure that reject states of the monitor 0,1 are indeed reserved. */
     }
     /*! Membership querry for an unordered set.
      *  \param[in] S     the unordered set

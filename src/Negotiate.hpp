@@ -90,6 +90,7 @@ public:
             /* number of components which can surely win so far: initially 0 */
             int done=0;
             /* recursively perform the negotiation */
+            std::cout << "current depth = " << k << std::endl;
             bool success = recursive_negotiation(k,starting_component,done);
             if (success) {
                 return true;
@@ -104,19 +105,35 @@ public:
      * \param[in] done  a counter counting the number of components which can surely win with the current contracts.
      * \param[out] true/false   success/failure of the negotiation. */
     bool recursive_negotiation(const int k, const int c, int done) {
+        std::cout << "\tTurn = " << c << '\n';
+        /* debugging: save interim results */
+        checkMakeDir("Outputs/InterimSets");
+        std::string Str = "";
+        Str += "Outputs/InterimSets/G";
+        Str += std::to_string(1-c);
+        Str += ".txt";
+        char Char[20];
+        size_t Length = Str.copy(Char, Str.length() + 1);
+        Char[Length] = '\0';
+        guarantee_[1-c]->writeToFile(Char);
+        /* end of debugging */
         negotiation::SafetyAutomaton* s = new negotiation::SafetyAutomaton();
         int flag = compute_spoilers_overall(c,s);
         if (flag==0) {
             /* when the game is sure losing for component c, the negotiation fails */
+            std::cout << "\tThe game is sure losing for component " << c << ". The negotiation failed. Terminating the process." << '\n';
             return false;
         } else if (done==2) {
             /* when both the components have sure winning strategies with the current set of contracts, the negotiation successfully terminates */
+            std::cout << "\tThe game is sure winning for both of the components. The negoitaiotn succeeded. Terminating the process." << '\n';
             return true;
         } else if (flag==2) {
             /* when the component c---but not (1-c)---has a sure winning strategy with the present contract, it's component (1-c)'s turn to compute the spoilers */
+            std::cout << "\tThe game is sure winning for component " << c << "." << '\n';
             return recursive_negotiation(k,1-c,done+1);
         } else {
             /* find the spoilers for component c, and update the current set of assumptions and guarantees */
+            std::cout << "\tComputing spoilers for component " << c << "." << '\n';
             negotiation::Spoilers spoiler(s);
             spoiler.boundedBisim(k);
             negotiation::SafetyAutomaton guarantee_updated(*guarantee_[1-c],*spoiler.spoilers_mini_);
@@ -147,10 +164,13 @@ public:
             out_flag=0;
             return out_flag;
         }
-//        /* debugging */
-//        spoilers_safety->writeToFile("Outputs/interim.txt");
-//        /* end of debugging */
+       /* debugging */
+       spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+       /* end of debugging */
         spoilers_safety->determinize();
+        /* debugging */
+        spoilers_safety->writeToFile("Outputs/interim_safe_det.txt");
+        /* end of debugging */
         /* find the spoilers for the liveness part (with the strategies being already restricted by the strategy obtained during the synthesis of the maybe safety controller) */
         SafetyAutomaton* spoilers_liveness = new SafetyAutomaton;
         std::vector<std::unordered_set<abs_type>*> allowed_inputs;
@@ -173,9 +193,12 @@ public:
             return out_flag;
         }
         /* debug */
-        spoilers_liveness->writeToFile("Outputs/interimset.txt");
+        spoilers_liveness->writeToFile("Outputs/interim_live.txt");
         /* debug ends */
         spoilers_liveness->determinize();
+        /* debug */
+        spoilers_liveness->writeToFile("Outputs/interim_live_det.txt");
+        /* debug ends */
         /* the overall spoiling behavior is the union of spoiling behavior for the safety spec and the liveness spec, or the overall non-spoiling behavior is the intersection of non-spoilers for safety AND non-spoilers for liveness */
         SafetyAutomaton spoilers_overall(*spoilers_safety, *spoilers_liveness);
         spoilers_overall.trim();

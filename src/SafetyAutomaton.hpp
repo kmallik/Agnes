@@ -70,7 +70,7 @@ public:
             }
         }
         addPost(post);
-        
+
         delete[] post;
     }
     /*! Constructor: product of two deterministic safety automata
@@ -79,10 +79,18 @@ public:
     SafetyAutomaton(const negotiation::SafetyAutomaton& A1,
                  const negotiation::SafetyAutomaton& A2) {
         /* the number of states of the product is the product of the number of states of A1 and A2 */
-        no_states_ = A1.no_states_*A2.no_states_;
+        // no_states_ = A1.no_states_*A2.no_states_;
+        no_states_ = (A1.no_states_-1)*(A2.no_states_-1)+1;
         /* the new state index is derived using the following lambda expression */
         auto new_ind = [&](abs_type i1, abs_type i2) -> abs_type {
-            return (i1*A2.no_states_ + i2);
+            if (i1==0 || i2==0) {
+                /* whenever one of the individual states is non-accepting, the joint state is also non-accepting */
+                return 0;
+            } else {
+                /* the indexing starts at 1 (excluding the sink) */
+                return ((i1-1)*(A2.no_states_-1) + (i2-1)) + 1;
+            }
+            // return (i1*A2.no_states_ + i2);
         };
         /* a product state is initial if all the corresponding individual states are initial */
         for (auto i1=A1.init_.begin(); i1!=A1.init_.end(); ++i1) {
@@ -102,9 +110,16 @@ public:
         }
         /* compute the post */
         std::unordered_set<abs_type>** post = new std::unordered_set<abs_type>*[no_states_*no_inputs_];
-        abs_type index = 0;
-        for (abs_type i1=0; i1<A1.no_states_; i1++) {
-            for (abs_type i2=0; i2<A2.no_states_; i2++) {
+        /* first add self loops to the sink state (state index 0) */
+        for (abs_type j=0; j<no_inputs_; j++) {
+            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+            set->insert(0);
+            post[addr(0,j)]=set;
+        }
+        /* compute post for the non-sink states */
+        abs_type index = 2;
+        for (abs_type i1=1; i1<A1.no_states_; i1++) {
+            for (abs_type i2=1; i2<A2.no_states_; i2++) {
                 abs_type i_new = new_ind(i1,i2);
                 for (abs_type j=0; j<no_inputs_; j++) {
                     std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
