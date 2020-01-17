@@ -80,7 +80,7 @@ public:
     /*! Perform a negotiation by progrssively increasing the length of spoiling behaviors. */
     bool iterative_deepening_search() {
         /* initialize the length of spoiling behavior set */
-        int k=1;
+        int k=2;
         /* the flag which is true if a solution is reached */
         bool success;
         /* negotiate until either a solution is found, or until increasing k does not change anything */
@@ -96,7 +96,8 @@ public:
                 return true;
             } else {
                 /* reset the sets of guarantees */
-                /* initialize the sets of guarantees as all accepting safety automata */
+                guarantee_.clear();
+                /* re-initialize the sets of guarantees as all accepting safety automata */
                 for (int c=0; c<2; c++) {
                     negotiation::SafetyAutomaton* s=new negotiation::SafetyAutomaton(components_[c]->no_outputs);
                     guarantee_.push_back(s);
@@ -190,21 +191,41 @@ public:
         /* debugging */
         spoilers_safety->writeToFile("Outputs/interim_safe_det.txt");
         /* end of debugging */
+        // /* construct a monitor for the liveness game which has the same state space as the safety monitor, and the transitions are obtained by deleting the transitions in the safety monitor which are disallowed by the control strategy */
+        // /* the allowed inputs are all the possible control inputs */
+        // std::vector<std::unordered_set<abs_type>*> allowed_inputs;
+        // for (abs_type i=0; i<monitor.no_states; i++) {
+        //     std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
+        //     for (abs_type j=0; j<monitor.no_control_inputs; j++) {
+        //         s->insert(j);
+        //     }
+        //     allowed_inputs.push_back(s);
+        // }
         /* find the spoilers for the liveness part (with the strategies being already restricted by the strategy obtained during the synthesis of the maybe safety controller) */
         SafetyAutomaton* spoilers_liveness = new SafetyAutomaton;
-        std::vector<std::unordered_set<abs_type>*> allowed_inputs;
-        for (abs_type i=0; i<monitor.no_states; i++) {
-            std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
-            for (auto j=sure_safe[i]->begin(); j!=sure_safe[i]->end(); ++j) {
-                s->insert(*j);
-            }
-            for (auto l=maybe_safe[i]->begin(); l!=maybe_safe[i]->end(); ++l) {
-                abs_type j= components_[c]->cont_ind(*l);
-                s->insert(j);
-            }
-            allowed_inputs.push_back(s);
-        }
-        negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], allowed_inputs);
+        // std::vector<std::unordered_set<abs_type>*> allowed_inputs;
+        // for (abs_type i=0; i<monitor.no_states; i++) {
+        //     std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
+        //     for (auto j=sure_safe[i]->begin(); j!=sure_safe[i]->end(); ++j) {
+        //         s->insert(*j);
+        //     }
+        //     for (auto l=maybe_safe[i]->begin(); l!=maybe_safe[i]->end(); ++l) {
+        //         abs_type j= components_[c]->cont_ind(*l);
+        //         s->insert(j);
+        //     }
+        //     allowed_inputs.push_back(s);
+        // }
+        negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], sure_safe, maybe_safe);
+        // /* here the assumption is that the state space of monitor_safe and of monitor_live are the same (because allowed_inputs uses the same state space) */
+        // // negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], allowed_inputs);
+        // /* new: the assumption is updated with the spoilers from the safety part */
+        // negotiation::SafetyAutomaton new_assumption(*spoilers_safety, *guarantee_[1-c]);
+        // new_assumption.determinize();
+        // new_assumption.trim();
+        // negotiation::LivenessGame monitor_live(*components_[c], new_assumption, *guarantee_[c], *target_states_[c], allowed_inputs);
+        /* debug */
+        monitor_live.writeToFile("Outputs/monitor_live.txt");
+        /* debug end */
         int flag2 = monitor_live.find_spoilers(spoilers_liveness);
         /* if some initial states are surely losing the liveness specification, then return false */
         if (flag2==0) {

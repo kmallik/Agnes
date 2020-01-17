@@ -29,6 +29,8 @@ public:
     abs_type no_states;
     /** @brief set of initial states **/
     std::unordered_set<abs_type> init_;
+    /** @brief number of component states **/
+    abs_type no_comp_states;
     /** @brief number of assume automaton states Na **/
     abs_type no_assume_states;
     /** @brief number of guarantee automaton states Ng **/
@@ -52,6 +54,7 @@ public:
     Monitor(const Monitor& other) {
         no_states=other.no_states;
         init_=other.init_;
+        no_comp_states=other.no_comp_states;
         no_assume_states=other.no_assume_states;
         no_guarantee_states=other.no_guarantee_states;
         no_control_inputs=other.no_control_inputs;
@@ -96,8 +99,46 @@ public:
         delete[] pre;
         delete[] post;
     }
-    /* constructor */
+    /* constructor: the allowed_inputs is a vectory of allowed_inputs of the *monitor states* */
+    Monitor(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee, std::vector<std::unordered_set<abs_type>*>& allowed_control_inputs, std::vector<std::unordered_set<abs_type>*>& allowed_joint_inputs) {
+        initialize(comp, assume, guarantee);
+        ComputeTransitions(comp, assume, guarantee, allowed_control_inputs, allowed_joint_inputs);
+    }
+    /* constructor without allowed inputs */
     Monitor(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee) {
+        initialize(comp, assume, guarantee);
+        std::vector<std::unordered_set<abs_type>*> allowed_control_inputs, allowed_joint_inputs;
+        /* allow all inputs */
+        std::unordered_set<abs_type> all_control_inputs, all_joint_inputs;
+        for (abs_type j=0; j<comp.no_control_inputs; j++)
+            all_control_inputs.insert(j);
+        for (abs_type im=0; im<comp.no_states; im++) {
+            for (abs_type ia=0; ia<assume.no_states_; ia++) {
+                for (abs_type ig=0; ig<guarantee.no_states_; ig++) {
+                    std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
+                    *s=all_control_inputs;
+                    allowed_control_inputs.push_back(s);
+                }
+            }
+        }
+        for (abs_type j=0; j<comp.no_control_inputs; j++) {
+            for (abs_type k=0; k<comp.no_dist_inputs; k++) {
+                all_joint_inputs.insert(addr_uw(j,k));
+            }
+        }
+        for (abs_type im=0; im<comp.no_states; im++) {
+            for (abs_type ia=0; ia<assume.no_states_; ia++) {
+                for (abs_type ig=0; ig<guarantee.no_states_; ig++) {
+                    std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
+                    *s=all_joint_inputs;
+                    allowed_joint_inputs.push_back(s);
+                }
+            }
+        }
+        ComputeTransitions(comp, assume, guarantee, allowed_control_inputs, allowed_joint_inputs);
+    }
+    /* initialize all non-transition related members */
+    void initialize(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee) {
         /* sanity check */
         if (comp.no_dist_inputs != assume.no_inputs_) {
             try {
@@ -116,18 +157,35 @@ public:
         /* compute the product */
        /* number of states is Nc*(Na-1)*(Ng-1)+2 */
         no_states=comp.no_states*(assume.no_states_-1)*(guarantee.no_states_-1)+2;
+        no_comp_states=comp.no_states;
         no_assume_states=assume.no_states_;
         no_guarantee_states=guarantee.no_states_;
+        // /* initial states of the monitor are given by the cartesian product of the component, assumption and guarantee initial states */
+        // for (auto i=comp.init_.begin(); i!=comp.init_.end(); ++i) {
+        //     for (auto j=assume.init_.begin(); j!=assume.init_.end(); ++j) {
+        //         for (auto k=guarantee.init_.begin(); k!=guarantee.init_.end(); ++k) {
+        //             init_.insert(monitor_state_ind(*i,*j,*k,no_assume_states,no_guarantee_states));
+        //         }
+        //     }
+        // }
         /* initial states of the monitor are given by the cartesian product of the component, assumption and guarantee initial states */
         for (auto i=comp.init_.begin(); i!=comp.init_.end(); ++i) {
-            for (auto j=assume.init_.begin(); j!=assume.init_.end(); ++j) {
-                for (auto k=guarantee.init_.begin(); k!=guarantee.init_.end(); ++k) {
-                    init_.insert(monitor_state_ind(*i,*j,*k,no_assume_states,no_guarantee_states));
+            /* the output label of the initial component state is used to initialize the guarantee automaton */
+            abs_type o=comp.state_to_output[*i];
+            for (auto k=guarantee.init_.begin(); k!=guarantee.init_.end(); ++k) {
+                std::unordered_set<abs_type>* p = guarantee.post_[guarantee.addr(*k,o)];
+                for (auto k2=p->begin(); k2!=p->end(); ++k2) {
+                    for (auto j=assume.init_.begin(); j!=assume.init_.end(); ++j) {
+                        init_.insert(monitor_state_ind(*i,*j,*k2,no_assume_states,no_guarantee_states));
+                    }
                 }
             }
         }
         no_control_inputs=comp.no_control_inputs;
         no_dist_inputs=comp.no_dist_inputs;
+    }
+    /* fill up the pre, post, and no_post arrays */
+    void ComputeTransitions(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee, std::vector<std::unordered_set<abs_type>*>& allowed_control_inputs, std::vector<std::unordered_set<abs_type>*>& allowed_joint_inputs) {
         no_post.assign(no_states*no_control_inputs*no_dist_inputs,0);
         /* the reject states are sink states */
         for (abs_type i=0; i<=1; i++) {
@@ -155,10 +213,19 @@ public:
         for (int ic=0; ic<comp.no_states; ic++) {
             for (int ia=1; ia<no_assume_states; ia++) {
                 for (int ig=1; ig<no_guarantee_states; ig++) {
+                    /* the pre state index for the tuple (ic,ia,ig)*/
+                    abs_type im = monitor_state_ind(ic,ia,ig,no_assume_states,no_guarantee_states);
                     for (int j=0; j<no_control_inputs; j++) {
+                        /* if there is a control strategy, and the current control input is not allowed, then continue with the next one */
+                        if ((allowed_control_inputs[im]->size()!=0) &&
+                            (allowed_control_inputs[im]->find(j)==allowed_control_inputs[im]->end())) {
+                            continue;
+                        }
                         for (int k=0; k<no_dist_inputs; k++) {
-                            /* the pre state index for the tuple (ic,ia,ig)*/
-                            abs_type im = monitor_state_ind(ic,ia,ig,no_assume_states,no_guarantee_states);
+                            /* if the current joint control input is not allowed, then continue with the next disturbance input */
+                            if (allowed_joint_inputs[im]->find(addr_uw(j,k))== allowed_joint_inputs[im]->end()) {
+                                continue;
+                            }
                             /* the post component states */
                             std::vector<abs_type> ic2 = *comp.post[comp.addr(ic,j,k)];
                             /* the post assumption state (singleton) */
@@ -176,6 +243,12 @@ public:
                                 } else {
                                     ig2 = *(guarantee.post_[guarantee.addr(ig,comp.state_to_output[*it])])->begin();
                                 }
+                                // /* new: the guarantee states are updated using the output labels of the component "pre states" */
+                                // if ((guarantee.post_[guarantee.addr(ig,comp.state_to_output[ic])])->size()==0) {
+                                //                    continue;
+                                // } else {
+                                //     ig2 = *(guarantee.post_[guarantee.addr(ig,comp.state_to_output[ic])])->begin();
+                                // }
                                 /* the post state tuple index */
                                 abs_type im2 = monitor_state_ind(*it,ia2,ig2,no_assume_states,no_guarantee_states);
                                 no_post[addr_xuw(im,j,k)]++;
@@ -337,6 +410,7 @@ public:
         writeMember(filename, "NO_STATES", no_states);
         writeMember(filename, "NO_INITIAL_STATES", init_.size());
         writeSet(filename, "INITIAL_STATE_LIST", init_);
+        writeMember<abs_type>(filename, "NO_COMP_STATES", no_comp_states);
         writeMember<abs_type>(filename, "NO_ASSUME_STATES", no_assume_states);
         writeMember<abs_type>(filename, "NO_GUARANTEE_STATES", no_guarantee_states);
         writeMember<abs_type>(filename, "NO_CONTROL_INPUTS", no_control_inputs);

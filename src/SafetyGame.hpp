@@ -31,7 +31,7 @@ public:
      *
      * \param[in] component_safe_states         indices of safe states
      * \param[in] str                                                 string specifying the sure/maybe winning condition
-     * \param[out] D                             winning state-input pairs */
+     * \param[out] D                             winning (monitor) state-input pairs */
     std::vector<std::unordered_set<abs_type>*> solve_safety_game(const std::unordered_set<abs_type> component_safe_states, const char* str="sure") {
         /* sanity check */
         if (!strcmp(str,"sure") && !strcmp(str,"maybe")) {
@@ -54,7 +54,7 @@ public:
         monitor_safe_states.insert(0);
         std::queue<abs_type> Q; /* FIFO queue of bad states */
         std::unordered_set<abs_type> E; /* bad states */
-        std::vector<std::unordered_set<abs_type>*> D; /* set of valid inputs indexed by the state indices */
+        std::vector<std::unordered_set<abs_type>*> D; /* set of valid inputs indexed by the monitor state indices */
         for (int i=0; i<no_states; i++) {
             std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
             D.push_back(s);
@@ -128,7 +128,13 @@ public:
                 }
             }
         }
-        /* winning strategy */
+        // /* winning strategy in terms of the component state indices */
+        // std::vector<std::unordered_set<abs_type>*> winning_strategy;
+        // for (abs_type ic=0; ic<no_comp_states; ic++) {
+        //     std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
+        //     abs_type im = monitor_state_ind(ic,)
+        // }
+        //
         return D;
     }
     /*! Generate the spoiling behavior as a safety automaton and write to a file.

@@ -256,7 +256,7 @@ public:
         for (auto i=init_old.begin(); i!=init_old.end(); ++i) {
             init_.insert(old_to_new[*i]);
         }
-        /* number of inputs remain the same: one side-effect of this is that we can use the function addr for computing both the new and old address of post in the post array. */
+        /* number of inputs remain the same: one benefit of this is that we can use the function addr for computing both the new and old address of post in the post array. */
         /* update the post array */
         std::unordered_set<abs_type>** post_new = new std::unordered_set<abs_type>*[no_states_*no_inputs_];
         for (abs_type i_new=0; i_new<no_states_; i_new++) {

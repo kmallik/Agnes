@@ -27,8 +27,8 @@ public:
     std::unordered_set<abs_type> monitor_target_states_;
     /*! Obstacle states for the liveness/reachability specification */
     std::unordered_set<abs_type> monitor_avoid_states_;
-    /*! Allowed control inputs */
-    std::vector<std::unordered_set<abs_type>*> allowed_inputs_;
+    // /*! Allowed control inputs */
+    // std::vector<std::unordered_set<abs_type>*> allowed_inputs_;
 //    /*! constuctor: see <Monitor> **/
 //    using Monitor::Monitor;
     /*! constructor
@@ -37,8 +37,12 @@ public:
      * \param[in] assume      the assumption safety automaton
      * \param[in] guarantee the guarantee safety automaton
      * \param[in] component_target_states   set of component target states
-     * \param[in] allowed_inputs    vector of allowed inputs indexed using the component state indices */
-    LivenessGame(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee, const std::unordered_set<abs_type> component_target_states, std::vector<std::unordered_set<abs_type>*> allowed_inputs) : Monitor(comp, assume, guarantee) {
+     * \param[in] allowed_control_inputs    vector of allowed control inputs indexed using the monitor state indices
+     * \param[in] allowed_joint_inputs      vector of allowed joint action inputs indexed using the monitor state indices
+
+     * NOTE: allowed_joint_inputs[i] has any effect only when allowed_control_inputs[i] is empty. */
+    LivenessGame(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee, const std::unordered_set<abs_type> component_target_states, std::vector<std::unordered_set<abs_type>*> allowed_control_inputs,
+    std::vector<std::unordered_set<abs_type>*> allowed_joint_inputs) : Monitor(comp, assume, guarantee, allowed_control_inputs, allowed_joint_inputs) {
         /* target states */
         /* the assumption violation is always in target */
         monitor_target_states_.insert(0);
@@ -50,24 +54,24 @@ public:
                 }
             }
         }
-        /* avoid state: the guarantee violation */
-        monitor_avoid_states_.insert(1);
-        /* allowed inputs */
-        for (abs_type im=0; im<no_states; im++) {
-            std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
-            /* for the sink, all inputs are allowed, and for the other states, the allowed inputs are derived from the allowed inputs for the respective component state */
-            if (im==0 || im==1) {
-                for (abs_type j=0; j<no_control_inputs; j++) {
-                    s->insert(j);
-                }
-            } else {
-                abs_type ic=component_state_ind(im);
-                for (auto l=allowed_inputs[ic]->begin(); l!=allowed_inputs[ic]->end(); ++l) {
-                    s->insert(*l);
-                }
-            }
-            allowed_inputs_.push_back(s);
-        }
+        // /* avoid state: the guarantee violation */
+        // monitor_avoid_states_.insert(1);
+        // /* allowed inputs */
+        // for (abs_type im=0; im<no_states; im++) {
+        //     std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
+        //     /* for the sink, all inputs are allowed, and for the other states, the allowed inputs are derived from the allowed inputs for the respective component state */
+        //     if (im==0 || im==1) {
+        //         for (abs_type j=0; j<no_control_inputs; j++) {
+        //             s->insert(j);
+        //         }
+        //     } else {
+        //         abs_type ic=component_state_ind(im);
+        //         for (auto l=allowed_inputs[ic]->begin(); l!=allowed_inputs[ic]->end(); ++l) {
+        //             s->insert(*l);
+        //         }
+        //     }
+        //     allowed_inputs_.push_back(s);
+        // }
     }
     /*! Solve reach-avoid game, where the target is given by the local specification, and the "obstacle" is given by the reject_G (violation of guarantee) state.
      *  The algorithm is taken from: https://gitlab.lrz.de/matthias/SCOTSv0.2/raw/master/manual/manual.pdf
@@ -153,10 +157,10 @@ public:
                         if (monitor_avoid_states_.find(*it)!=monitor_avoid_states_.end()) {
                             continue;
                         }
-                        /* check the viability of the used control input */
-                        if (allowed_inputs_[*it]->find(j)==allowed_inputs_[*it]->end()) {
-                            continue;
-                        }
+                        // /* check the viability of the used control input */
+                        // if (allowed_inputs_[*it]->find(j)==allowed_inputs_[*it]->end()) {
+                        //     continue;
+                        // }
                         if (!strcmp(str,"sure")) {
                             K[addr_xu(*it,j)]--;
                             M[addr_xu(*it,j)] = (M[addr_xu(*it,j)]>=1+V[x] ? M[addr_xu(*it,j)] : 1+V[x]);
@@ -203,17 +207,35 @@ public:
         for (abs_type i=0; i<no_states; i++) {
             YY.insert(i);
         }
-        /* set of allowed inputs (control input when str=sure, joint input when str=maybe) indexed by the state indices */
+        // /* set of allowed inputs (control input when str=sure, joint input when str=maybe) indexed by the state indices */
+        // std::vector<std::unordered_set<abs_type>*> D;
+        // for (abs_type i=0; i<no_states; i++) {
+        //     std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
+        //     D.push_back(s);
+        //     for (auto j=allowed_inputs_[i]->begin(); j!=allowed_inputs_[i]->end(); ++j) {
+        //         if (!strcmp(str,"sure")) {
+        //             D[i]->insert(*j);
+        //         } else {
+        //             for (abs_type k=0; k<no_dist_inputs; k++) {
+        //                 D[i]->insert(addr_uw(*j,k));
+        //             }
+        //         }
+        //     }
+        // }
+        /* set of allowed inputs = non-blocking inputs (control input when str=sure, joint input when str=maybe) indexed by the state indices */
         std::vector<std::unordered_set<abs_type>*> D;
         for (abs_type i=0; i<no_states; i++) {
             std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
             D.push_back(s);
-            for (auto j=allowed_inputs_[i]->begin(); j!=allowed_inputs_[i]->end(); ++j) {
-                if (!strcmp(str,"sure")) {
-                    D[i]->insert(*j);
-                } else {
-                    for (abs_type k=0; k<no_dist_inputs; k++) {
-                        D[i]->insert(addr_uw(*j,k));
+            for (abs_type j=0; j<no_control_inputs; j++) {
+                for (abs_type k=0; k<no_dist_inputs; k++) {
+                    if (no_post[addr_xuw(i,j,k)]!=0) {
+                        if (!strcmp(str,"sure")) {
+                            D[i]->insert(j);
+                            break;
+                        } else {
+                            D[i]->insert(addr_uw(j,k));
+                        }
                     }
                 }
             }
