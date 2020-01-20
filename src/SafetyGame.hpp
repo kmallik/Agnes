@@ -178,7 +178,9 @@ public:
             out_flag=0;
             return out_flag;
         }
-        /* map from old state indices to new state indices: all the losing states (i.e. no maybe winning) are lumped in state 0 */
+        /* compute the set of reachable states */
+        std::unordered_set<abs_type> reachable_set = compute_reachable_set();
+        /* map from old state indices to new state indices: all the losing states (i.e. not maybe winning) and the unreachable states are lumped in state 0 */
         std::vector<abs_type> new_state_ind;
         /* count new states */
         int no_new_states=0;
@@ -188,9 +190,9 @@ public:
         /* the "reject_A" state is mapped to index 1 */
         new_state_ind.push_back(0);
         no_new_states++;
-        /* for the rest of the maybe winning monitor states, a new state index is created, and all the losing monitor states are mapped to state 0 */
+        /* for the rest of the reachable maybe winning monitor states, a new state index is created, and all the losing monitor states are mapped to state 0 */
         for (abs_type i=2; i<no_states; i++) {
-            if (maybe_win[i]->size()!=0) {
+            if (maybe_win[i]->size()!=0 && reachable_set.find(i)!=reachable_set.end()) {
                 new_state_ind.push_back(no_new_states);
                 no_new_states++;
             } else {
@@ -205,16 +207,16 @@ public:
         }
         spoilers->no_inputs_=no_dist_inputs;
         /* construct the post transition array of the original transition systems */
-        std::unordered_set<abs_type>** post=new std::unordered_set<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
+        std::unordered_set<abs_type>** post_loc=new std::unordered_set<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
         for (abs_type i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
             std::unordered_set<abs_type>* v=new std::unordered_set<abs_type>;
-            post[i]=v;
+            post_loc[i]=v;
         }
         /* first fill the post array by disregarding the control restriction imposed by sure_win and maybe_win */
         /* 0 is the sink state */
         for (abs_type j=0; j<no_control_inputs; j++) {
             for (abs_type k=0; k<no_dist_inputs; k++) {
-                post[addr_post(0,j,k)]->insert(0);
+                post_loc[addr_post(0,j,k)]->insert(0);
             }
         }
         /* for the rest, use the pre */
@@ -223,7 +225,7 @@ public:
                 for (abs_type k=0; k<no_dist_inputs; k++) {
                     std::vector<abs_type> p=*pre[addr_xuw(i,j,k)];
                     for (int l=0; l<p.size(); l++) {
-                        post[addr_post(p[l],j,k)]->insert(i);
+                        post_loc[addr_post(p[l],j,k)]->insert(i);
                     }
                 }
             }
@@ -234,18 +236,18 @@ public:
             std::unordered_set<abs_type>* v=new std::unordered_set<abs_type>;
             arr2[i]=v;
         }
-        /* current state index in the domain of maybe_win */
-        int ind=0;
         /* first add self loops to the reject state */
         for (abs_type k=0; k<no_dist_inputs; k++) {
-            arr2[addr(ind,k)]->insert(0);
+            arr2[addr(0,k)]->insert(0);
+            arr2[addr(1,k)]->insert(1);
         }
-        ind++;
+        /* current state index in the domain of maybe_win */
+        int ind=2;
         /* iterate over all the monitor states */
-        for (abs_type q=0; q<no_states; q++) {
-            /* the current state i is set as the q-th state in the domain of maybe_win */
+        for (abs_type q=2; q<no_states; q++) {
+            /* the current state i is set as the q-th state in the domain of the reachable part of maybe_win */
             abs_type i;
-            if (maybe_win[q]->size()!=0 && q!=1) {
+            if (maybe_win[q]->size()!=0 && reachable_set.find(q)!=reachable_set.end()) {
                 i=q;
             } else {
                 continue;
@@ -257,7 +259,7 @@ public:
                     /* iterate over all the disturbance inputs*/
                     for (abs_type k=0; k<no_dist_inputs; k++) {
                         /* iterate over all the post states */
-                        for (auto it2=post[addr_post(i,*it,k)]->begin(); it2!=post[addr_post(i,*it,k)]->end(); it2++) {
+                        for (auto it2=post_loc[addr_post(i,*it,k)]->begin(); it2!=post_loc[addr_post(i,*it,k)]->end(); it2++) {
                             arr2[addr(ind,k)]->insert(new_state_ind[*it2]);
                         }
                     }
@@ -284,7 +286,7 @@ public:
                     for (abs_type k=0; k<no_dist_inputs; k++) {
                         if (maybe_win[i]->find(addr_uw(j,k)) != maybe_win[i]->end()) {
                             /* iterate over all the post states */
-                            for (auto it2=post[addr_post(i,j,k)]->begin(); it2!=post[addr_post(i,j,k)]->end(); it2++) {
+                            for (auto it2=post_loc[addr_post(i,j,k)]->begin(); it2!=post_loc[addr_post(i,j,k)]->end(); it2++) {
                                 arr2[addr(ind,k)]->insert(new_state_ind[*it2]);
                             }
                         } else {
@@ -297,9 +299,11 @@ public:
             }
         }
         spoilers->addPost(arr2);
-//        spoilers.writeToFile(filename);
+        // debug
+       // spoilers->writeToFile("Outputs/safety_spoilers.txt");
+        // debug end
 
-        delete[] post;
+        delete[] post_loc;
         delete[] arr2;
 
         /* successfully generated a spoiling automaton: return out_flag=1 */

@@ -281,7 +281,7 @@ public:
         }
     }
     /*! Compue the set of states reachable from the initial states */
-    std::unordered_set<abs_type> reachable_set() {
+    std::unordered_set<abs_type> compute_reachable_set() {
         /* the queue of states whose successors are to be explored */
         std::queue<abs_type> fifo;
         /* states already seen */

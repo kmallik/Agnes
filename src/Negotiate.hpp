@@ -127,9 +127,9 @@ public:
         // /* end of debugging */
         negotiation::SafetyAutomaton* s = new negotiation::SafetyAutomaton();
         int flag = compute_spoilers_overall(c,s);
-        // /* debug */
-        // s->writeToFile("Outputs/interim_overall_det.txt");
-        // /* debug ends */
+        /* debug */
+        s->writeToFile("Outputs/interim_overall_det.txt");
+        /* debug ends */
         if (flag==0) {
             /* when the game is sure losing for component c, the negotiation fails */
             std::cout << "\tThe game is sure losing for component " << c << ". The negotiation failed. Terminating the process." << '\n';

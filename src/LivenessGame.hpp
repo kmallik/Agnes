@@ -334,7 +334,7 @@ public:
             return out_flag;
         }
         /* compute the set of states reachable from the intitial states */
-        std::unordered_set<abs_type> R = reachable_set();
+        std::unordered_set<abs_type> R = compute_reachable_set();
         /* find intersection of the reachable set with the maybe winning region */
         std::unordered_set<abs_type> W;
         for (auto i=R.begin(); i!=R.end(); ++i) {
@@ -377,7 +377,7 @@ public:
             }
         }
 //        /* compute the reachable set of states with this updated transition system */
-//        R = reachable_set();
+//        R = compute_reachable_set();
         /* save the old target states, as target states will be updated */
         std::unordered_set<abs_type> monitor_target_states_old=monitor_target_states_;
         /* remove those targets which are not in the reachable part of maybe winning region */
@@ -459,7 +459,7 @@ public:
             }
         }
         /* find the reachable states using the updated post */
-        R = reachable_set();
+        R = compute_reachable_set();
 
         /* construct the spoilers safety automaton */
         /* map from new state indices to old state indices: all the losing states (i.e. no maybe winning) are lumped in state 0 */

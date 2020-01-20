@@ -1,8 +1,10 @@
 # NO_SAFE_STATES:
-5
+7
 # SET_SAFE_STATES:
 0
 1
 2
 3
 4
+5
+6
