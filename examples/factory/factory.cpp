@@ -52,6 +52,7 @@ int main() {
 
     N.iterative_deepening_search();
 
+    checkMakeDir("Outputs");
     N.guarantee_[0]->writeToFile("Outputs/guarantee_1.txt");
     N.guarantee_[1]->writeToFile("Outputs/guarantee_2.txt");
 

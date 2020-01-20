@@ -80,7 +80,7 @@ public:
     /*! Perform a negotiation by progrssively increasing the length of spoiling behaviors. */
     bool iterative_deepening_search() {
         /* initialize the length of spoiling behavior set */
-        int k=2;
+        int k=0;
         /* the flag which is true if a solution is reached */
         bool success;
         /* negotiate until either a solution is found, or until increasing k does not change anything */
@@ -114,22 +114,22 @@ public:
      * \param[out] true/false   success/failure of the negotiation. */
     bool recursive_negotiation(const int k, const int c, int done) {
         std::cout << "\tTurn = " << c << '\n';
-        /* debugging: save interim results */
-        checkMakeDir("Outputs/InterimSets");
-        std::string Str = "";
-        Str += "Outputs/InterimSets/G";
-        Str += std::to_string(1-c);
-        Str += ".txt";
-        char Char[20];
-        size_t Length = Str.copy(Char, Str.length() + 1);
-        Char[Length] = '\0';
-        guarantee_[1-c]->writeToFile(Char);
-        /* end of debugging */
+        // /* debugging: save interim results */
+        // checkMakeDir("Outputs/InterimSets");
+        // std::string Str = "";
+        // Str += "Outputs/InterimSets/G";
+        // Str += std::to_string(c);
+        // Str += ".txt";
+        // char Char[20];
+        // size_t Length = Str.copy(Char, Str.length() + 1);
+        // Char[Length] = '\0';
+        // guarantee_[c]->writeToFile(Char);
+        // /* end of debugging */
         negotiation::SafetyAutomaton* s = new negotiation::SafetyAutomaton();
         int flag = compute_spoilers_overall(c,s);
-        /* debug */
-        s->writeToFile("Outputs/interim_overall_det.txt");
-        /* debug ends */
+        // /* debug */
+        // s->writeToFile("Outputs/interim_overall_det.txt");
+        // /* debug ends */
         if (flag==0) {
             /* when the game is sure losing for component c, the negotiation fails */
             std::cout << "\tThe game is sure losing for component " << c << ". The negotiation failed. Terminating the process." << '\n';
@@ -147,14 +147,22 @@ public:
             std::cout << "\tComputing spoilers for component " << c << "." << '\n';
             negotiation::Spoilers spoiler(s);
             spoiler.boundedBisim(k);
-            /* debug */
-            spoiler.spoilers_mini_->writeToFile("Outputs/interim_overall_mini.txt");
-            /* debug ends */
+            // /* debug */
+            // spoiler.spoilers_mini_->writeToFile("Outputs/interim_overall_mini.txt");
+            // /* debug ends */
             negotiation::SafetyAutomaton guarantee_updated(*guarantee_[1-c],*spoiler.spoilers_mini_);
             *guarantee_[1-c]=guarantee_updated;
-            /* debug */
-            guarantee_[1-c]->writeToFile("Outputs/interim_updated_guarantee.txt");
-            /* debug ends */
+            // /* save the updated guarantee */
+            // Str += "Outputs/G";
+            // Str += std::to_string(1-c);
+            // Str += ".txt";
+            // char Char[20];
+            // size_t Length = Str.copy(Char, Str.length() + 1);
+            // Char[Length] = '\0';
+            // guarantee_[1-c]->writeToFile(Char);
+            // /* debug */
+            // guarantee_[1-c]->writeToFile("Outputs/interim_updated_guarantee.txt");
+            // /* debug ends */
             bool flag2 = recursive_negotiation(k,1-c,0);
             if (flag2) {
                 return true;
@@ -172,9 +180,9 @@ public:
         int out_flag;
         /* find the spoilers for the safety part */
         negotiation::SafetyGame monitor(*components_[c],*guarantee_[1-c],*guarantee_[c]);
-        /* debug */
-        monitor.writeToFile("Outputs/monitor.txt");
-        /* debug end */
+        // /* debug */
+        // monitor.writeToFile("Outputs/monitor.txt");
+        // /* debug end */
         std::vector<std::unordered_set<abs_type>*> sure_safe = monitor.solve_safety_game(*safe_states_[c],"sure");
         std::vector<std::unordered_set<abs_type>*> maybe_safe = monitor.solve_safety_game(*safe_states_[c],"maybe");
         SafetyAutomaton* spoilers_safety = new SafetyAutomaton;
@@ -184,13 +192,13 @@ public:
             out_flag=0;
             return out_flag;
         }
-       /* debugging */
-       spoilers_safety->writeToFile("Outputs/interim_safe.txt");
-       /* end of debugging */
+       // /* debugging */
+       // spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+       // /* end of debugging */
         spoilers_safety->determinize();
-        /* debugging */
-        spoilers_safety->writeToFile("Outputs/interim_safe_det.txt");
-        /* end of debugging */
+        // /* debugging */
+        // spoilers_safety->writeToFile("Outputs/interim_safe_det.txt");
+        // /* end of debugging */
         // /* construct a monitor for the liveness game which has the same state space as the safety monitor, and the transitions are obtained by deleting the transitions in the safety monitor which are disallowed by the control strategy */
         // /* the allowed inputs are all the possible control inputs */
         // std::vector<std::unordered_set<abs_type>*> allowed_inputs;
@@ -223,22 +231,22 @@ public:
         // new_assumption.determinize();
         // new_assumption.trim();
         // negotiation::LivenessGame monitor_live(*components_[c], new_assumption, *guarantee_[c], *target_states_[c], allowed_inputs);
-        /* debug */
-        monitor_live.writeToFile("Outputs/monitor_live.txt");
-        /* debug end */
+        // /* debug */
+        // monitor_live.writeToFile("Outputs/monitor_live.txt");
+        // /* debug end */
         int flag2 = monitor_live.find_spoilers(spoilers_liveness);
         /* if some initial states are surely losing the liveness specification, then return false */
         if (flag2==0) {
             out_flag=0;
             return out_flag;
         }
-        /* debug */
-        spoilers_liveness->writeToFile("Outputs/interim_live.txt");
-        /* debug ends */
+        // /* debug */
+        // spoilers_liveness->writeToFile("Outputs/interim_live.txt");
+        // /* debug ends */
         spoilers_liveness->determinize();
-        /* debug */
-        spoilers_liveness->writeToFile("Outputs/interim_live_det.txt");
-        /* debug ends */
+        // /* debug */
+        // spoilers_liveness->writeToFile("Outputs/interim_live_det.txt");
+        // /* debug ends */
         /* the overall spoiling behavior is the union of spoiling behavior for the safety spec and the liveness spec, or the overall non-spoiling behavior is the intersection of non-spoilers for safety AND non-spoilers for liveness */
         SafetyAutomaton spoilers_overall(*spoilers_safety, *spoilers_liveness);
         spoilers_overall.trim();
