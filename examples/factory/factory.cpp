@@ -46,9 +46,10 @@ int main() {
     target_states_files.push_back(t1);
     target_states_files.push_back(t2);
 
-    int max_depth=4;
+    // int max_depth=4;
+    // negotiation::Negotiate N(component_files, safe_states_files, target_states_files, max_depth);
 
-    negotiation::Negotiate N(component_files, safe_states_files, target_states_files, max_depth);
+    negotiation::Negotiate N(component_files, safe_states_files, target_states_files);
 
     N.iterative_deepening_search();
 

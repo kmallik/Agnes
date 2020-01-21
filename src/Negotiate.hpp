@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <unordered_set>
+#include <bits/stdc++.h> /* for setting max_depth_=highest possible integer by default */
 
 #include "Component.hpp" /* for the definition of data types abs_type and abs_ptr_type */
 //#include "FileHandler.hpp"
@@ -39,7 +40,7 @@ public:
     Negotiate(const std::vector<std::string*> component_files,
               const std::vector<std::string*> safe_states_files,
               const std::vector<std::string*> target_states_files,
-              const int max_depth) : max_depth_(max_depth) {
+              const int max_depth=INT_MAX) : max_depth_(max_depth) {
         /* sanity check */
         if (component_files.size()!=safe_states_files.size() ||
             component_files.size()!=target_states_files.size() ||
@@ -81,17 +82,26 @@ public:
     bool iterative_deepening_search() {
         /* initialize the length of spoiling behavior set */
         int k=0;
+        /* actual k used for the length of the spoiling behavior set */
+        int k_act;
         /* the flag which is true if a solution is reached */
         bool success;
         /* negotiate until either a solution is found, or until increasing k does not change anything */
-        while (k<=max_depth_) {
+        while (1) {
+            /* stop when maximum depth is reached */
+            if (k==max_depth_) {
+                std::cout << "Maximum search depth of spoiling behavior reached. No solution found. Terminating." << '\n';
+            }
             /* index of the component starting negotiation: inconsequential to the outcome */
             int starting_component=0;
             /* number of components which can surely win so far: initially 0 */
             int done=0;
             /* recursively perform the negotiation */
             std::cout << "current depth = " << k << std::endl;
-            bool success = recursive_negotiation(k,starting_component,done);
+            bool success = recursive_negotiation(k,k_act,starting_component,done);
+            if (k_act<k) {
+                std::cout << "The search of spoiling behavior got saturated. No solution found. Terminating." << '\n';
+            }
             if (success) {
                 return true;
             } else {
@@ -108,11 +118,12 @@ public:
         }
     }
     /*! Perform negotiation recursively with fixed length of spoiling behavior.
-     * \param[in] k         length of the spoiling behavior set.
+     * \param[in] k         prescribed length of the spoiling behavior set.
+     * \param[in] k_act     actual length of the spoiling behavior used (could be smaller than k_max due to saturation of the bounded bisimulation algorithm).
      * \param[in] c         the index of the component who gets to compute the spoiling behaviors in this round.
      * \param[in] done  a counter counting the number of components which can surely win with the current contracts.
      * \param[out] true/false   success/failure of the negotiation. */
-    bool recursive_negotiation(const int k, const int c, int done) {
+    bool recursive_negotiation(const int k, int& k_act, const int c, int done) {
         std::cout << "\tTurn = " << c << '\n';
         // /* debugging: save interim results */
         // checkMakeDir("Outputs/InterimSets");
@@ -141,12 +152,13 @@ public:
         } else if (flag==2) {
             /* when the component c---but not (1-c)---has a sure winning strategy with the present contract, it's component (1-c)'s turn to compute the spoilers */
             std::cout << "\tThe game is sure winning for component " << c << "." << '\n';
-            return recursive_negotiation(k,1-c,done+1);
+            return recursive_negotiation(k,k_act,1-c,done+1);
         } else {
             /* find the spoilers for component c, and update the current set of assumptions and guarantees */
             std::cout << "\tComputing spoilers for component " << c << "." << '\n';
             negotiation::Spoilers spoiler(s);
             spoiler.boundedBisim(k);
+            k_act=spoiler.k_;
             // /* debug */
             // spoiler.spoilers_mini_->writeToFile("Outputs/interim_overall_mini.txt");
             // /* debug ends */
@@ -163,7 +175,7 @@ public:
             // /* debug */
             // guarantee_[1-c]->writeToFile("Outputs/interim_updated_guarantee.txt");
             // /* debug ends */
-            bool flag2 = recursive_negotiation(k,1-c,0);
+            bool flag2 = recursive_negotiation(k,k_act,1-c,0);
             if (flag2) {
                 return true;
             } else {
