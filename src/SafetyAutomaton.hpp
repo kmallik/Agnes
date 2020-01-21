@@ -117,7 +117,7 @@ public:
             post[addr(0,j)]=set;
         }
         /* compute post for the non-sink states */
-        abs_type index = 2;
+        abs_type index = no_inputs_;
         for (abs_type i1=1; i1<A1.no_states_; i1++) {
             for (abs_type i2=1; i2<A2.no_states_; i2++) {
                 abs_type i_new = new_ind(i1,i2);
@@ -199,7 +199,13 @@ public:
         for (int i=0; i<no_elems; i++) {
             std::unordered_set<abs_type>* v=new std::unordered_set<abs_type>;
             post_[i]=v;
+//            /* debug */
+//            cout << "i = " << i << "\n";
+//            /* debug end */
             for (auto it=post[i]->begin(); it!=post[i]->end(); ++it) {
+//                /* debug */
+//                cout << "\t *it = " << *it << "\n";
+//                /* debug end */
                 post_[i]->insert(*it);
             }
         }

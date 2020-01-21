@@ -31,18 +31,18 @@ using namespace std;
 int main() {
 
     std::vector<std::string*> component_files, safe_states_files, target_states_files;
-    std::string* c1= new std::string("Inputs/C1.txt");
-    std::string* c2= new std::string("Inputs/C2.txt");
+    std::string* c1= new std::string("Inputs/feeder.txt");
+    std::string* c2= new std::string("Inputs/plant.txt");
     component_files.push_back(c1);
     component_files.push_back(c2);
 
-    std::string* s1= new std::string("Inputs/safe_states_1.txt");
-    std::string* s2= new std::string("Inputs/safe_states_2.txt");
+    std::string* s1= new std::string("Inputs/safe_states_feeder.txt");
+    std::string* s2= new std::string("Inputs/safe_states_plant.txt");
     safe_states_files.push_back(s1);
     safe_states_files.push_back(s2);
 
-    std::string* t1= new std::string("Inputs/target_states_1.txt");
-    std::string* t2= new std::string("Inputs/target_states_2.txt");
+    std::string* t1= new std::string("Inputs/target_states_feeder.txt");
+    std::string* t2= new std::string("Inputs/target_states_plant.txt");
     target_states_files.push_back(t1);
     target_states_files.push_back(t2);
 
@@ -54,8 +54,8 @@ int main() {
     N.iterative_deepening_search();
 
     checkMakeDir("Outputs");
-    N.guarantee_[0]->writeToFile("Outputs/guarantee_1.txt");
-    N.guarantee_[1]->writeToFile("Outputs/guarantee_2.txt");
+    N.guarantee_[0]->writeToFile("Outputs/guarantee_feeder.txt");
+    N.guarantee_[1]->writeToFile("Outputs/guarantee_plant.txt");
 
 //    /* testing of the safety part */
 //    negotiation::Component c1("Inputs/C1.txt");

@@ -101,6 +101,7 @@ public:
             bool success = recursive_negotiation(k,k_act,starting_component,done);
             if (k_act<k) {
                 std::cout << "The search of spoiling behavior got saturated. No solution found. Terminating." << '\n';
+                return false;
             }
             if (success) {
                 return true;
@@ -139,7 +140,7 @@ public:
         negotiation::SafetyAutomaton* s = new negotiation::SafetyAutomaton();
         int flag = compute_spoilers_overall(c,s);
         /* debug */
-        s->writeToFile("Outputs/interim_overall_det.txt");
+//        s->writeToFile("Outputs/interim_overall_det.txt");
         /* debug ends */
         if (flag==0) {
             /* when the game is sure losing for component c, the negotiation fails */
@@ -204,9 +205,10 @@ public:
             out_flag=0;
             return out_flag;
         }
-       // /* debugging */
-       // spoilers_safety->writeToFile("Outputs/interim_safe.txt");
-       // /* end of debugging */
+        /* debugging */
+//        spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+        /* end of debugging */
+        spoilers_safety->trim();
         spoilers_safety->determinize();
         // /* debugging */
         // spoilers_safety->writeToFile("Outputs/interim_safe_det.txt");
@@ -252,9 +254,11 @@ public:
             out_flag=0;
             return out_flag;
         }
-        // /* debug */
-        // spoilers_liveness->writeToFile("Outputs/interim_live.txt");
-        // /* debug ends */
+//         /* debug */
+//         spoilers_liveness->writeToFile("Outputs/interim_live.txt");
+//        spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+//         /* debug ends */
+        spoilers_liveness->trim();
         spoilers_liveness->determinize();
         // /* debug */
         // spoilers_liveness->writeToFile("Outputs/interim_live_det.txt");

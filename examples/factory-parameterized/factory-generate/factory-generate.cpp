@@ -17,7 +17,7 @@
  /* The parameters */
  #define plant_process_cycles_ 2
  #define plant_hibernate_cycle_ 3
- #define feeder_max_wait_cycles_ 3
+ #define feeder_max_wait_cycles_ 5
 
 using namespace std;
 using namespace negotiation;
@@ -145,7 +145,7 @@ int main() {
     Str_file += "/feeder.txt";
     create(Str_file);
     writeMember<abs_type>(Str_file, "NO_STATES", no_states_feeder);
-    writeMember<int>(Str_file, "No_INITIAL_STATES", init_feeder.size());
+    writeMember<int>(Str_file, "NO_INITIAL_STATES", init_feeder.size());
     writeSet<abs_type>(Str_file, "INITIAL_STATE_LIST", init_feeder);
     writeMember<abs_type>(Str_file, "NO_CONTROL_INPUTS", no_control_inputs_feeder);
     writeMember<abs_type>(Str_file, "NO_DIST_INPUTS", no_dist_inputs_feeder);
@@ -299,13 +299,61 @@ int main() {
     Str_file += "/plant.txt";
     create(Str_file);
     writeMember<abs_type>(Str_file, "NO_STATES", no_states_plant);
-    writeMember<int>(Str_file, "No_INITIAL_STATES", init_plant.size());
+    writeMember<int>(Str_file, "NO_INITIAL_STATES", init_plant.size());
     writeSet<abs_type>(Str_file, "INITIAL_STATE_LIST", init_plant);
     writeMember<abs_type>(Str_file, "NO_CONTROL_INPUTS", no_control_inputs_plant);
     writeMember<abs_type>(Str_file, "NO_DIST_INPUTS", no_dist_inputs_plant);
     writeMember<abs_type>(Str_file, "NO_OUTPUTS", no_outputs_plant);
     writeVec<abs_type>(Str_file, "STATE_TO_OUTPUT", state_to_output_plant);
     writeArrVec<abs_type>(Str_file, "TRANSITION_POST", post_plant, no_states_plant*no_control_inputs_plant*no_dist_inputs_plant);
+    
+    /* create the safe set for the feeder: all states except "shutdown" are safe */
+    std::unordered_set<abs_type> safe_states_feeder;
+    for (abs_type i=0; i<no_states_feeder-1; i++) {
+        safe_states_feeder.insert(i);
+    }
+    Str_file = Str_input_folder;
+    Str_file += "/safe_states_feeder.txt";
+    create(Str_file);
+    writeMember<abs_type>(Str_file, "NO_SAFE_STATES", safe_states_feeder.size());
+    writeSet<abs_type>(Str_file, "SET_SAFE_STATES", safe_states_feeder);
+    
+    /* create the safe set for the plant: all states are safe */
+    std::unordered_set<abs_type> safe_states_plant;
+    for (abs_type i=0; i<no_states_plant; i++) {
+        safe_states_plant.insert(i);
+    }
+    Str_file = Str_input_folder;
+    Str_file += "/safe_states_plant.txt";
+    create(Str_file);
+    writeMember<abs_type>(Str_file, "NO_SAFE_STATES", safe_states_plant.size());
+    writeSet<abs_type>(Str_file, "SET_SAFE_STATES", safe_states_plant);
+    
+    /* create the target states for the feeder: all states are in the target */
+    std::unordered_set<abs_type> target_states_feeder;
+    for (abs_type i=0; i<no_states_feeder; i++) {
+        target_states_feeder.insert(i);
+    }
+    Str_file = Str_input_folder;
+    Str_file += "/target_states_feeder.txt";
+    create(Str_file);
+    writeMember<abs_type>(Str_file, "NO_TARGET_STATES", target_states_feeder.size());
+    writeSet<abs_type>(Str_file, "SET_TARGET_STATES", target_states_feeder);
+    
+    /* create the target states for the plant: the two states with the highest hibernating time are in the target */
+    std::unordered_set<abs_type> target_states_plant;
+    if (plant_hibernate_cycle_>1) {
+        target_states_plant.insert(2*plant_process_cycles_+plant_hibernate_cycle_);
+        target_states_plant.insert(no_states_plant-1);
+    } else {
+        target_states_plant.insert(0);
+        target_states_plant.insert(1);
+    }
+    Str_file = Str_input_folder;
+    Str_file += "/target_states_plant.txt";
+    create(Str_file);
+    writeMember<abs_type>(Str_file, "NO_TARGET_STATES", target_states_plant.size());
+    writeSet<abs_type>(Str_file, "SET_TARGET_STATES", target_states_plant);
 
     /* copy other necessary files */
     Str_folder += "/";
