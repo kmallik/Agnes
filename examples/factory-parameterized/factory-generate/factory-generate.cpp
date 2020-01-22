@@ -9,7 +9,7 @@
   * A program to automatically generate the feeder-plant example in a parameterized way.
   */
 
- #include <experimental/filesystem>
+ #include <stdlib.h>
 
  // #include "FileHandler.hpp"
  #include "Component.hpp" /* for the definition of the data type abs_type */
@@ -306,7 +306,7 @@ int main() {
     writeMember<abs_type>(Str_file, "NO_OUTPUTS", no_outputs_plant);
     writeVec<abs_type>(Str_file, "STATE_TO_OUTPUT", state_to_output_plant);
     writeArrVec<abs_type>(Str_file, "TRANSITION_POST", post_plant, no_states_plant*no_control_inputs_plant*no_dist_inputs_plant);
-    
+
     /* create the safe set for the feeder: all states except "shutdown" are safe */
     std::unordered_set<abs_type> safe_states_feeder;
     for (abs_type i=0; i<no_states_feeder-1; i++) {
@@ -317,7 +317,7 @@ int main() {
     create(Str_file);
     writeMember<abs_type>(Str_file, "NO_SAFE_STATES", safe_states_feeder.size());
     writeSet<abs_type>(Str_file, "SET_SAFE_STATES", safe_states_feeder);
-    
+
     /* create the safe set for the plant: all states are safe */
     std::unordered_set<abs_type> safe_states_plant;
     for (abs_type i=0; i<no_states_plant; i++) {
@@ -328,7 +328,7 @@ int main() {
     create(Str_file);
     writeMember<abs_type>(Str_file, "NO_SAFE_STATES", safe_states_plant.size());
     writeSet<abs_type>(Str_file, "SET_SAFE_STATES", safe_states_plant);
-    
+
     /* create the target states for the feeder: all states are in the target */
     std::unordered_set<abs_type> target_states_feeder;
     for (abs_type i=0; i<no_states_feeder; i++) {
@@ -339,7 +339,7 @@ int main() {
     create(Str_file);
     writeMember<abs_type>(Str_file, "NO_TARGET_STATES", target_states_feeder.size());
     writeSet<abs_type>(Str_file, "SET_TARGET_STATES", target_states_feeder);
-    
+
     /* create the target states for the plant: the two states with the highest hibernating time are in the target */
     std::unordered_set<abs_type> target_states_plant;
     if (plant_hibernate_cycle_>1) {
@@ -356,11 +356,18 @@ int main() {
     writeSet<abs_type>(Str_file, "SET_TARGET_STATES", target_states_plant);
 
     /* copy other necessary files */
+    std::string Str_copy = "cp files/Makefile ";
     Str_folder += "/";
-    Length = Str_folder.copy(folder_name, Str_folder.length() + 1);
-    folder_name[Length] = '\0';
-    std::experimental::filesystem::copy("files/Makefile", folder_name);
-    std::experimental::filesystem::copy("files/factory.cpp", folder_name);
+    Str_copy += Str_folder;
+    char char_copy[42];
+    Length = Str_copy.copy(char_copy, Str_copy.length() + 1);
+    char_copy[Length] = '\0';
+    system(char_copy);
+    Str_copy = "cp files/factory.cpp ";
+    Str_copy += Str_folder;
+    Length = Str_copy.copy(char_copy, Str_copy.length() + 1);
+    char_copy[Length] = '\0';
+    system(char_copy);
 
     delete[] post_feeder;
     delete[] post_plant;
