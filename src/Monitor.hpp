@@ -226,7 +226,11 @@ public:
                             if (allowed_joint_inputs[im]->find(addr_uw(j,k))== allowed_joint_inputs[im]->end()) {
                                 continue;
                             }
-                            /* if any of the non-deterministic successors of the assumption automata is rejecting, then this is counting as a rejecting assumption */
+                            /* if the assume automaton has hit a deadend, then ignore the current disturbance input */
+                            if ((assume.post_[assume.addr(ia,k)])->size()==0) {
+                                continue;
+                            }
+                            /* if any of the non-deterministic successors of the assumption automata is rejecting, then this is counted as a rejecting assumption */
                             bool is_assume_reject=false;
                             for (auto ia2=(assume.post_[assume.addr(ia,k)])->begin(); ia2!= (assume.post_[assume.addr(ia,k)])->end(); ++ia2) {
                                 if (*ia2==0) {
@@ -260,6 +264,11 @@ public:
                                     // } else {
                                     //     ig2 = *(guarantee.post_[guarantee.addr(ig,comp.state_to_output[ic])])->begin();
                                     // }
+
+                                    /* if the guarantee automaton reached a deadend, then ignore the current component successor state */
+                                    if ((guarantee.post_[guarantee.addr(ig,comp.state_to_output[*ic2])])->size()==0) {
+                                        continue;
+                                    }
                                     /* if any of the non-deterministic successors of the guarantee automata is rejecting, then this is counting as a rejecting guarantee */
                                     bool is_guarantee_reject=false;
                                     for (auto ig2=(guarantee.post_[guarantee.addr(ig,comp.state_to_output[*ic2])])->begin(); ig2!=(guarantee.post_[guarantee.addr(ig,comp.state_to_output[*ic2])])->end(); ++ig2) {
@@ -270,30 +279,36 @@ public:
                                     }
                                     /* if either the assumption or the guarantee hit the bad state, then the monitor goes to one of the sink states and no other transitions are added */
                                     if (is_assume_reject && !is_guarantee_reject) {
-                                        pre[addr_xuw(0,j,k)]->insert(im);
-                                        post[addr_xuw(im,j,k)]->insert(0);
-                                        no_post[addr_xuw(im,j,k)]++;
+                                        if (post[addr_xuw(im,j,k)]->find(0) ==        post[addr_xuw(im,j,k)]->end()) {
+                                            pre[addr_xuw(0,j,k)]->insert(im);
+                                            post[addr_xuw(im,j,k)]->insert(0);
+                                            no_post[addr_xuw(im,j,k)]++;
+                                        }
                                         continue;
                                     // } else if (*ig2==0) {
                                     } else if (is_guarantee_reject) {
-                                        pre[addr_xuw(1,j,k)]->insert(im);
-                                        post[addr_xuw(im,j,k)]->insert(1);
-                                        no_post[addr_xuw(im,j,k)]++;
+                                        if (post[addr_xuw(im,j,k)]->find(1) ==        post[addr_xuw(im,j,k)]->end()) {
+                                            pre[addr_xuw(1,j,k)]->insert(im);
+                                            post[addr_xuw(im,j,k)]->insert(1);
+                                            no_post[addr_xuw(im,j,k)]++;
+                                        }
                                         continue;
                                     }
                                     /* add non-deterministic guarantee successor states */
                                     for (auto ig2=(guarantee.post_[guarantee.addr(ig,comp.state_to_output[*ic2])])->begin(); ig2!=(guarantee.post_[guarantee.addr(ig,comp.state_to_output[*ic2])])->end(); ++ig2) {
                                         /* the post state tuple index */
                                         abs_type im2 = monitor_state_ind(*ic2,*ia2,*ig2,no_assume_states,no_guarantee_states);
-                                        no_post[addr_xuw(im,j,k)]++;
-        //                                valid_input[im]->insert(j);
-        //                                valid_joint_input[im]->insert(addr_uw(j,k));
-                                        // if (*ia2!=0 && *ig2!=0) {
-                                        // if (!is_assume_reject && !is_guarantee_reject) {
-                                        pre[addr_xuw(im2,j,k)]->insert(im);
-                                        post[addr_xuw(im,j,k)]->insert(im2);
-                                        // } else if (*ia2==0 && *ig2!=0) {
-                                        // }
+                                        if (post[addr_xuw(im,j,k)]->find(im2) ==        post[addr_xuw(im,j,k)]->end()) {
+                                            no_post[addr_xuw(im,j,k)]++;
+            //                                valid_input[im]->insert(j);
+            //                                valid_joint_input[im]->insert(addr_uw(j,k));
+                                            // if (*ia2!=0 && *ig2!=0) {
+                                            // if (!is_assume_reject && !is_guarantee_reject) {
+                                            pre[addr_xuw(im2,j,k)]->insert(im);
+                                            post[addr_xuw(im,j,k)]->insert(im2);
+                                            // } else if (*ia2==0 && *ig2!=0) {
+                                            // }
+                                        }
                                     }
                                 }
                             }
