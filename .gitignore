@@ -5,6 +5,11 @@
 !*/
 !Makefile
 
+# Subfolders #
+##############
+factory_pp*/
+Outputs/
+
 # Compiled source #
 ###################
 *~
