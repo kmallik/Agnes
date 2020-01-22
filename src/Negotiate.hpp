@@ -140,7 +140,7 @@ public:
         negotiation::SafetyAutomaton* s = new negotiation::SafetyAutomaton();
         int flag = compute_spoilers_overall(c,s);
         /* debug */
-//        s->writeToFile("Outputs/interim_overall_det.txt");
+       s->writeToFile("Outputs/interim_overall_det.txt");
         /* debug ends */
         if (flag==0) {
             /* when the game is sure losing for component c, the negotiation fails */
@@ -164,6 +164,8 @@ public:
             // spoiler.spoilers_mini_->writeToFile("Outputs/interim_overall_mini.txt");
             // /* debug ends */
             negotiation::SafetyAutomaton guarantee_updated(*guarantee_[1-c],*spoiler.spoilers_mini_);
+            guarantee_updated.trim();
+            guarantee_updated.determinize();
             *guarantee_[1-c]=guarantee_updated;
             // /* save the updated guarantee */
             // Str += "Outputs/G";

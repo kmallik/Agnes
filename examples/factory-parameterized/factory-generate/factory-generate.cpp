@@ -15,9 +15,9 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define plant_process_cycles_ 2
- #define plant_hibernate_cycle_ 3
- #define feeder_max_wait_cycles_ 5
+ #define plant_process_cycles_ 1
+ #define plant_hibernate_cycle_ 1
+ #define feeder_max_wait_cycles_ 4
 
 using namespace std;
 using namespace negotiation;
