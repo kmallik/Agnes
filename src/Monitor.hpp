@@ -40,7 +40,7 @@ public:
     /** @brief number of internal disturbance inputs P **/
     abs_type no_dist_inputs;
     /** @brief array containing the list of all pre: pre[i*M*P + j*P + k] lists all pres for the state, control input, dist input pair (i,j,k) */
-    std::vector<abs_type>** pre;
+    std::unordered_set<abs_type>** pre;
     /** @brief array containing the list of all posts: post[i*M*P + j*P + k] lists all posts for the state, control input, dist input pair (i,j,k) */
     std::unordered_set<abs_type>** post;
     /** @brief vector[N*M*P] saving the number of post for each pair (i,j,k) **/
@@ -60,12 +60,12 @@ public:
         no_control_inputs=other.no_control_inputs;
         no_dist_inputs=other.no_dist_inputs;
         abs_type size = no_states*no_control_inputs*no_dist_inputs;
-        pre = new std::vector<abs_type>*[size];
+        pre = new std::unordered_set<abs_type>*[size];
         for (int i=0; i<size; i++) {
-            std::vector<abs_type>* v=new std::vector<abs_type>;
+            std::unordered_set<abs_type>* v=new std::unordered_set<abs_type>;
             pre[i]=v;
-            for (int j=0; j<other.pre[i]->size(); j++) {
-                pre[i]->push_back((*other.pre[i])[j]);
+            for (auto j=other.pre[i]->begin(); j!=other.pre[i]->end(); ++j) {
+                pre[i]->insert(*j);
             }
         }
         post = new std::unordered_set<abs_type>*[size];
@@ -196,10 +196,10 @@ public:
             }
         }
         /* compute and store the predecessors, successors, valid inputs, and valid joint inputs for fast synthesis */
-        pre=new std::vector<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
+        pre=new std::unordered_set<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
         post=new std::unordered_set<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
         for (int i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
-            std::vector<abs_type> *v=new std::vector<abs_type>;
+            std::unordered_set<abs_type> *v=new std::unordered_set<abs_type>;
             pre[i]=v;
             std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
             post[i]=s;
@@ -270,13 +270,13 @@ public:
                                     }
                                     /* if either the assumption or the guarantee hit the bad state, then the monitor goes to one of the sink states and no other transitions are added */
                                     if (is_assume_reject && !is_guarantee_reject) {
-                                        pre[addr_xuw(0,j,k)]->push_back(im);
+                                        pre[addr_xuw(0,j,k)]->insert(im);
                                         post[addr_xuw(im,j,k)]->insert(0);
                                         no_post[addr_xuw(im,j,k)]++;
                                         continue;
                                     // } else if (*ig2==0) {
                                     } else if (is_guarantee_reject) {
-                                        pre[addr_xuw(1,j,k)]->push_back(im);
+                                        pre[addr_xuw(1,j,k)]->insert(im);
                                         post[addr_xuw(im,j,k)]->insert(1);
                                         no_post[addr_xuw(im,j,k)]++;
                                         continue;
@@ -290,7 +290,7 @@ public:
         //                                valid_joint_input[im]->insert(addr_uw(j,k));
                                         // if (*ia2!=0 && *ig2!=0) {
                                         // if (!is_assume_reject && !is_guarantee_reject) {
-                                        pre[addr_xuw(im2,j,k)]->push_back(im);
+                                        pre[addr_xuw(im2,j,k)]->insert(im);
                                         post[addr_xuw(im,j,k)]->insert(im2);
                                         // } else if (*ia2==0 && *ig2!=0) {
                                         // }
@@ -305,8 +305,8 @@ public:
         /* self loops to the reject states */
         for (abs_type j=0; j<no_control_inputs; j++) {
             for (abs_type k=0; k<no_dist_inputs; k++) {
-                pre[addr_xuw(0,j,k)]->push_back(0);
-                pre[addr_xuw(1,j,k)]->push_back(1);
+                pre[addr_xuw(0,j,k)]->insert(0);
+                pre[addr_xuw(1,j,k)]->insert(1);
                 post[addr_xuw(0,j,k)]->insert(0);
                 post[addr_xuw(1,j,k)]->insert(1);
             }

@@ -111,7 +111,7 @@ public:
             for (int j=0; j<no_control_inputs; j++) {
                 for (int k=0; k<no_dist_inputs; k++) {
                     abs_type x2 = addr_xuw(x,j,k);
-                    for (std::vector<abs_type>::iterator it=pre[x2]->begin(); it!=pre[x2]->end(); ++it) {
+                    for (auto it=pre[x2]->begin(); it!=pre[x2]->end(); ++it) {
                         /* remove all the control inputs from the pre-states of x which lead to x */
                         if (!strcmp(str,"sure")) {
                             /* for sure winning, remove the control input */
@@ -223,9 +223,9 @@ public:
         for (int i=1; i<no_states; i++) {
             for (abs_type j=0; j<no_control_inputs; j++) {
                 for (abs_type k=0; k<no_dist_inputs; k++) {
-                    std::vector<abs_type> p=*pre[addr_xuw(i,j,k)];
-                    for (int l=0; l<p.size(); l++) {
-                        post_loc[addr_post(p[l],j,k)]->insert(i);
+                    std::unordered_set<abs_type> p=*pre[addr_xuw(i,j,k)];
+                    for (auto l=p.begin(); l!=p.end(); ++l) {
+                        post_loc[addr_post(*l,j,k)]->insert(i);
                     }
                 }
             }
