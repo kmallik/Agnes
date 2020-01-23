@@ -104,6 +104,21 @@ public:
                 }
             }
         }
+        /* set of bad disturbance inputs (which lead to assumption violation) per state */
+        std::vector<std::unordered_set<abs_type>*> bad_dist;
+        for (abs_type i=0; i<no_states; i++) {
+            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+            for (abs_type k=0; k<no_dist_inputs; k++) {
+                for (abs_type j=0; j<no_control_inputs; j++) {
+                    std::unordered_set<abs_type> p = *post[addr_xuw(i,j,k)];
+                    if (p.find(0)!=p.end()) {
+                        set->insert(k);
+                        break;
+                    }
+                }
+            }
+            bad_dist.push_back(set);
+        }
         /* iterate until Q is empty, i.e. when a fixed point is reached*/
         while (Q.size()!=0) {
             abs_type x = Q.front();
@@ -112,18 +127,28 @@ public:
                 for (int k=0; k<no_dist_inputs; k++) {
                     abs_type x2 = addr_xuw(x,j,k);
                     for (auto it=pre[x2]->begin(); it!=pre[x2]->end(); ++it) {
-                        /* remove all the control inputs from the pre-states of x which lead to x */
-                        if (!strcmp(str,"sure")) {
-                            /* for sure winning, remove the control input */
-                            D[*it]->erase(j);
-                        } else {
-                            /* for maybe winning, remove the joint input */
-                            D[*it]->erase(addr_uw(j,k));
+                        /* new: the current joint input is bad, unless the disturbance input leads to assumption violation */
+//                        std::unordered_set<abs_type> p = *post[addr_xuw(*it,j,k)];
+                        if (bad_dist[*it]->find(k)==bad_dist[*it]->end()) {
+                            /* remove all the control inputs from the pre-states of x which lead to x */
+                            if (!strcmp(str,"sure")) {
+                                /* for sure winning, remove the control input */
+                                D[*it]->erase(j);
+                            } else {
+                                /* for maybe winning, remove the joint input */
+                                D[*it]->erase(addr_uw(j,k));
+                            }
+                            if (D[*it]->size()==0 && !isMember<abs_type>(E,*it)) {
+                                /* debug */
+                                std::cout << "state marked as bad = " << *it << "\n";
+                                /* debug end */
+                                Q.push(*it);
+                                E.insert(*it);
+                            }
                         }
-                        if (D[*it]->size()==0 && !isMember<abs_type>(E,*it)) {
-                            Q.push(*it);
-                            E.insert(*it);
-                        }
+//                        else {
+//                            std::cout << "bingo\n";
+//                        }
                     }
                 }
             }
@@ -336,7 +361,7 @@ private:
      * \param[in] i     state index*/
     bool isDeadEnd(const abs_type i) {
         for (abs_type j=0; j<no_control_inputs; j++) {
-            for (abs_type k=0; k<no_control_inputs; k++) {
+            for (abs_type k=0; k<no_dist_inputs; k++) {
                 if (no_post[addr_xuw(i,j,k)]!=0) {
                     return false;
                 }

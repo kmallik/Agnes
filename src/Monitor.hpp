@@ -279,7 +279,7 @@ public:
                                     }
                                     /* if either the assumption or the guarantee hit the bad state, then the monitor goes to one of the sink states and no other transitions are added */
                                     if (is_assume_reject && !is_guarantee_reject) {
-                                        if (post[addr_xuw(im,j,k)]->find(0) ==        post[addr_xuw(im,j,k)]->end()) {
+                                        if (post[addr_xuw(im,j,k)]->find(0) == post[addr_xuw(im,j,k)]->end()) {
                                             pre[addr_xuw(0,j,k)]->insert(im);
                                             post[addr_xuw(im,j,k)]->insert(0);
                                             no_post[addr_xuw(im,j,k)]++;
@@ -287,7 +287,7 @@ public:
                                         continue;
                                     // } else if (*ig2==0) {
                                     } else if (is_guarantee_reject) {
-                                        if (post[addr_xuw(im,j,k)]->find(1) ==        post[addr_xuw(im,j,k)]->end()) {
+                                        if (post[addr_xuw(im,j,k)]->find(1) == post[addr_xuw(im,j,k)]->end()) {
                                             pre[addr_xuw(1,j,k)]->insert(im);
                                             post[addr_xuw(im,j,k)]->insert(1);
                                             no_post[addr_xuw(im,j,k)]++;
@@ -298,7 +298,7 @@ public:
                                     for (auto ig2=(guarantee.post_[guarantee.addr(ig,comp.state_to_output[*ic2])])->begin(); ig2!=(guarantee.post_[guarantee.addr(ig,comp.state_to_output[*ic2])])->end(); ++ig2) {
                                         /* the post state tuple index */
                                         abs_type im2 = monitor_state_ind(*ic2,*ia2,*ig2,no_assume_states,no_guarantee_states);
-                                        if (post[addr_xuw(im,j,k)]->find(im2) ==        post[addr_xuw(im,j,k)]->end()) {
+                                        if (post[addr_xuw(im,j,k)]->find(im2) == post[addr_xuw(im,j,k)]->end()) {
                                             no_post[addr_xuw(im,j,k)]++;
             //                                valid_input[im]->insert(j);
             //                                valid_joint_input[im]->insert(addr_uw(j,k));

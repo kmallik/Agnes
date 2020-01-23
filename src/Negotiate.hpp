@@ -81,7 +81,7 @@ public:
     /*! Perform a negotiation by progrssively increasing the length of spoiling behaviors. */
     bool iterative_deepening_search() {
         /* initialize the length of spoiling behavior set */
-        int k=0;
+        int k=2;
         /* actual k used for the length of the spoiling behavior set */
         int k_act;
         /* the flag which is true if a solution is reached */
@@ -144,7 +144,7 @@ public:
         /* debug ends */
         if (flag==0) {
             /* when the game is sure losing for component c, the negotiation fails */
-            std::cout << "\tThe game is sure losing for component " << c << ". The negotiation failed. Terminating the process." << '\n';
+            std::cout << "\tThe game is sure losing for component " << c << "." << '\n';
             return false;
         } else if (done==2) {
             /* when both the components have sure winning strategies with the current set of contracts, the negotiation successfully terminates */
