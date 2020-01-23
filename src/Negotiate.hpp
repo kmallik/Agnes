@@ -266,11 +266,15 @@ public:
         // spoilers_liveness->writeToFile("Outputs/interim_live_det.txt");
         // /* debug ends */
         /* the overall spoiling behavior is the union of spoiling behavior for the safety spec and the liveness spec, or the overall non-spoiling behavior is the intersection of non-spoilers for safety AND non-spoilers for liveness */
-        SafetyAutomaton spoilers_overall(*spoilers_safety, *spoilers_liveness);
-        spoilers_overall.trim();
+        SafetyAutomaton spoilers_liveness_and_safety(*spoilers_safety, *spoilers_liveness);
+        spoilers_liveness_and_safety.trim();
+
+        /* new: minimize the spoiler automaton before saving */
+        negotiation::Spoilers spoilers_overall(&spoilers_liveness_and_safety);
+        spoilers_overall.boundedBisim();
 
         /* copy the overall spoiling behavior to the one supplied as input for storing the spoiling behaviors */
-        *spoilers=spoilers_overall;
+        *spoilers=*spoilers_overall.spoilers_mini_;
         /* if both the safety and the liveness games are sure winning, then return out_flag=2, else return out_flag=1 */
         if (flag1==2 && flag2==2) {
             out_flag=2;

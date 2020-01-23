@@ -7,6 +7,8 @@
 #ifndef SPOILERS_HPP_
 #define SPOILERS_HPP_
 
+#include <bits/stdc++.h> /* for setting k=highest possible integer by default */
+
 #include "SafetyAutomaton.hpp"
 
 /** @namespace negotiation **/
@@ -222,9 +224,13 @@ public:
     }
     /*! Perform k-steps of the bounded bisimulation algorithm.
      * \param[in] k         number of refinement iterations */
-    void boundedBisim(int k) {
+    void boundedBisim(int k=INT_MAX) {
         for (int i=0; i<k; i++) {
             refineQuotient();
+            /* if the refinement didn't produce new partition, then terminate the bounded bisimulation procedure */
+            if (k_==i) {
+                break;
+            }
             spoilers_mini_->resetPost();
             computeMiniTransitions();
         }
