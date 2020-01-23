@@ -142,21 +142,21 @@ public:
                 K.push_back(np);
             }
         }
-        /* set of bad disturbance inputs (which lead to assumption violation) per state */
-        std::vector<std::unordered_set<abs_type>*> bad_dist;
-        for (abs_type i=0; i<no_states; i++) {
-            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
-            for (abs_type k=0; k<no_dist_inputs; k++) {
-                for (abs_type j=0; j<no_control_inputs; j++) {
-                    std::unordered_set<abs_type> p = *post[addr_xuw(i,j,k)];
-                    if (p.find(0)!=p.end()) {
-                        set->insert(k);
-                        break;
-                    }
-                }
-            }
-            bad_dist.push_back(set);
-        }
+//        /* set of bad disturbance inputs (which lead to assumption violation) per state */
+//        std::vector<std::unordered_set<abs_type>*> bad_dist;
+//        for (abs_type i=0; i<no_states; i++) {
+//            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+//            for (abs_type k=0; k<no_dist_inputs; k++) {
+//                for (abs_type j=0; j<no_control_inputs; j++) {
+//                    std::unordered_set<abs_type> p = *post[addr_xuw(i,j,k)];
+//                    if (p.find(0)!=p.end()) {
+//                        set->insert(k);
+//                        break;
+//                    }
+//                }
+//            }
+//            bad_dist.push_back(set);
+//        }
         /* until the queue is empty */
         while (Q.size()!=0) {
             /* pop the oldest element */
@@ -172,10 +172,10 @@ public:
                         if (monitor_avoid_states_.find(*it)!=monitor_avoid_states_.end()) {
                             continue;
                         }
-                        /* if the disturbance input leads to assumption violation, ignore */
-                        if (bad_dist[*it]->find(k)!=bad_dist[*it]->end()) {
-                            continue;
-                        }
+//                        /* if the disturbance input leads to assumption violation, ignore */
+//                        if (bad_dist[*it]->find(k)!=bad_dist[*it]->end()) {
+//                            continue;
+//                        }
                         if (!strcmp(str,"sure")) {
                             K[addr_xu(*it,j)]--;
                             M[addr_xu(*it,j)] = (M[addr_xu(*it,j)]>=1+V[x] ? M[addr_xu(*it,j)] : 1+V[x]);
@@ -255,21 +255,21 @@ public:
                 }
             }
         }
-        /* set of bad disturbance inputs (which lead to assumption violation) per state */
-        std::vector<std::unordered_set<abs_type>*> bad_dist;
-        for (abs_type i=0; i<no_states; i++) {
-            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
-            for (abs_type k=0; k<no_dist_inputs; k++) {
-                for (abs_type j=0; j<no_control_inputs; j++) {
-                    std::unordered_set<abs_type> p = *post[addr_xuw(i,j,k)];
-                    if (p.find(0)!=p.end()) {
-                        set->insert(k);
-                        break;
-                    }
-                }
-            }
-            bad_dist.push_back(set);
-        }
+//        /* set of bad disturbance inputs (which lead to assumption violation) per state */
+//        std::vector<std::unordered_set<abs_type>*> bad_dist;
+//        for (abs_type i=0; i<no_states; i++) {
+//            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+//            for (abs_type k=0; k<no_dist_inputs; k++) {
+//                for (abs_type j=0; j<no_control_inputs; j++) {
+//                    std::unordered_set<abs_type> p = *post[addr_xuw(i,j,k)];
+//                    if (p.find(0)!=p.end()) {
+//                        set->insert(k);
+//                        break;
+//                    }
+//                }
+//            }
+//            bad_dist.push_back(set);
+//        }
         /* the inner mu variable */
         std::unordered_set<abs_type> XX;
         std::vector<unordered_set<abs_type>*> reach_win;
@@ -288,10 +288,10 @@ public:
                 }
                 for (abs_type j=0; j<no_control_inputs; j++) {
                     for (abs_type k=0; k<no_dist_inputs; k++) {
-                        /* if the disturbance input leads to assumption violation, ignore */
-                        if (bad_dist[*i]->find(k)!=bad_dist[*i]->end()) {
-                            continue;
-                        }
+//                        /* if the disturbance input leads to assumption violation, ignore */
+//                        if (bad_dist[*i]->find(k)!=bad_dist[*i]->end()) {
+//                            continue;
+//                        }
                         /* the address to look up in the post array */
                         abs_type l=addr_xuw(*i,j,k);
                         for (auto i2=post[l]->begin(); i2!=post[l]->end(); ++i2) {
