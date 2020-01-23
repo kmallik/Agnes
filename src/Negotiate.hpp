@@ -81,9 +81,10 @@ public:
     /*! Perform a negotiation by progrssively increasing the length of spoiling behaviors. */
     bool iterative_deepening_search() {
         /* initialize the length of spoiling behavior set */
-        int k=2;
+        int k=0;
         /* actual k used for the length of the spoiling behavior set */
-        int k_act;
+        int k_now[2]={-1,-1};
+        int k_old[2]={-1,-1};
         /* the flag which is true if a solution is reached */
         bool success;
         /* negotiate until either a solution is found, or until increasing k does not change anything */
@@ -98,10 +99,14 @@ public:
             int done=0;
             /* recursively perform the negotiation */
             std::cout << "current depth = " << k << std::endl;
-            bool success = recursive_negotiation(k,k_act,starting_component,done);
-            if (k_act<k) {
+            bool success = recursive_negotiation(k,k_now,starting_component,done);
+            /* if there was no change in the depth of bounded bisimulation in the first round of spoiler finding, then stop the procedure */
+            if (k_now[0]==k_old[0] && k_now[1]==k_old[1]) {
                 std::cout << "The search of spoiling behavior got saturated. No solution found. Terminating." << '\n';
                 return false;
+            } else {
+                k_old[0]=k_now[0];
+                k_old[1]=k_now[1];
             }
             if (success) {
                 return true;
@@ -120,11 +125,11 @@ public:
     }
     /*! Perform negotiation recursively with fixed length of spoiling behavior.
      * \param[in] k         prescribed length of the spoiling behavior set.
-     * \param[in] k_act     actual length of the spoiling behavior used (could be smaller than k_max due to saturation of the bounded bisimulation algorithm).
+     * \param[in] k_act     actual length of the spoiling behavior used in the first round of finding the spoilers for both components (could be smaller than k_max due to saturation of the bounded bisimulation algorithm).
      * \param[in] c         the index of the component who gets to compute the spoiling behaviors in this round.
      * \param[in] done  a counter counting the number of components which can surely win with the current contracts.
      * \param[out] true/false   success/failure of the negotiation. */
-    bool recursive_negotiation(const int k, int& k_act, const int c, int done) {
+    bool recursive_negotiation(const int k, int* k_act, const int c, int done) {
         std::cout << "\tTurn = " << c << '\n';
         // /* debugging: save interim results */
         // checkMakeDir("Outputs/InterimSets");
@@ -159,7 +164,9 @@ public:
             std::cout << "\tComputing spoilers for component " << c << "." << '\n';
             negotiation::Spoilers spoiler(s);
             spoiler.boundedBisim(k);
-            k_act=spoiler.k_;
+            if (k_act[c]==-1) {
+                k_act[c]=spoiler.k_;
+            }
             // /* debug */
             // spoiler.spoilers_mini_->writeToFile("Outputs/interim_overall_mini.txt");
             // /* debug ends */
