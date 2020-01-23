@@ -160,27 +160,27 @@ public:
         no_comp_states=comp.no_states;
         no_assume_states=assume.no_states_;
         no_guarantee_states=guarantee.no_states_;
-        // /* initial states of the monitor are given by the cartesian product of the component, assumption and guarantee initial states */
-        // for (auto i=comp.init_.begin(); i!=comp.init_.end(); ++i) {
-        //     for (auto j=assume.init_.begin(); j!=assume.init_.end(); ++j) {
-        //         for (auto k=guarantee.init_.begin(); k!=guarantee.init_.end(); ++k) {
-        //             init_.insert(monitor_state_ind(*i,*j,*k,no_assume_states,no_guarantee_states));
-        //         }
-        //     }
-        // }
-        /* initial states of the monitor are given by the cartesian product of the component, assumption initial states, and the gurantee states at time instant 1 (based on the output from the current component state) */
+        /* initial states of the monitor are given by the cartesian product of the component, assumption and guarantee initial states */
         for (auto i=comp.init_.begin(); i!=comp.init_.end(); ++i) {
-            /* the output label of the initial component state is used to initialize the guarantee automaton */
-            abs_type o=comp.state_to_output[*i];
-            for (auto k=guarantee.init_.begin(); k!=guarantee.init_.end(); ++k) {
-                std::unordered_set<abs_type>* p = guarantee.post_[guarantee.addr(*k,o)];
-                for (auto k2=p->begin(); k2!=p->end(); ++k2) {
-                    for (auto j=assume.init_.begin(); j!=assume.init_.end(); ++j) {
-                        init_.insert(monitor_state_ind(*i,*j,*k2,no_assume_states,no_guarantee_states));
-                    }
+            for (auto j=assume.init_.begin(); j!=assume.init_.end(); ++j) {
+                for (auto k=guarantee.init_.begin(); k!=guarantee.init_.end(); ++k) {
+                    init_.insert(monitor_state_ind(*i,*j,*k,no_assume_states,no_guarantee_states));
                 }
             }
         }
+        // /* initial states of the monitor are given by the cartesian product of the component, assumption initial states, and the gurantee states at time instant 1 (based on the output from the current component state) */
+        // for (auto i=comp.init_.begin(); i!=comp.init_.end(); ++i) {
+        //     /* the output label of the initial component state is used to initialize the guarantee automaton */
+        //     abs_type o=comp.state_to_output[*i];
+        //     for (auto k=guarantee.init_.begin(); k!=guarantee.init_.end(); ++k) {
+        //         std::unordered_set<abs_type>* p = guarantee.post_[guarantee.addr(*k,o)];
+        //         for (auto k2=p->begin(); k2!=p->end(); ++k2) {
+        //             for (auto j=assume.init_.begin(); j!=assume.init_.end(); ++j) {
+        //                 init_.insert(monitor_state_ind(*i,*j,*k2,no_assume_states,no_guarantee_states));
+        //             }
+        //         }
+        //     }
+        // }
         no_control_inputs=comp.no_control_inputs;
         no_dist_inputs=comp.no_dist_inputs;
     }

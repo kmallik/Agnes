@@ -140,7 +140,7 @@ public:
                             }
                             if (D[*it]->size()==0 && !isMember<abs_type>(E,*it)) {
                                 /* debug */
-                                std::cout << "state marked as bad = " << *it << "\n";
+                                // std::cout << "state marked as bad = " << *it << "\n";
                                 /* debug end */
                                 Q.push(*it);
                                 E.insert(*it);

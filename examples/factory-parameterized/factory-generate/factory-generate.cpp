@@ -17,7 +17,7 @@
  /* The parameters */
  #define plant_process_cycles_ 1
  #define plant_hibernate_cycle_ 1
- #define feeder_max_wait_cycles_ 4
+ #define feeder_max_wait_cycles_ 3
 
 using namespace std;
 using namespace negotiation;
@@ -139,6 +139,14 @@ int main() {
     post_feeder[post_addr_feeder(no_states_feeder-2,1,0)]->push_back(no_states_feeder-1);
     post_feeder[post_addr_feeder(no_states_feeder-2,1,1)]->push_back(no_states_feeder-1);
     post_feeder[post_addr_feeder(no_states_feeder-2,1,2)]->push_back(no_states_feeder-1);
+
+    /* self loop in the shutdown state */
+    post_feeder[post_addr_feeder(no_states_feeder-1,0,0)]->push_back(no_states_feeder-1);
+    post_feeder[post_addr_feeder(no_states_feeder-1,0,1)]->push_back(no_states_feeder-1);
+    post_feeder[post_addr_feeder(no_states_feeder-1,0,2)]->push_back(no_states_feeder-1);
+    post_feeder[post_addr_feeder(no_states_feeder-1,1,0)]->push_back(no_states_feeder-1);
+    post_feeder[post_addr_feeder(no_states_feeder-1,1,1)]->push_back(no_states_feeder-1);
+    post_feeder[post_addr_feeder(no_states_feeder-1,1,2)]->push_back(no_states_feeder-1);
 
     /* write the description of the feeder model */
     std::string Str_file = Str_input_folder;
