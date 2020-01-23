@@ -166,7 +166,12 @@ public:
             negotiation::SafetyAutomaton guarantee_updated(*guarantee_[1-c],*spoiler.spoilers_mini_);
             guarantee_updated.trim();
             guarantee_updated.determinize();
-            *guarantee_[1-c]=guarantee_updated;
+            
+            /* new: minimize the guarantee automaton before saving */
+            negotiation::Spoilers guarantee_final(&guarantee_updated);
+            guarantee_final.boundedBisim();
+            
+            *guarantee_[1-c]=*guarantee_final.spoilers_mini_;
             // /* save the updated guarantee */
             // Str += "Outputs/G";
             // Str += std::to_string(1-c);
@@ -266,15 +271,11 @@ public:
         // spoilers_liveness->writeToFile("Outputs/interim_live_det.txt");
         // /* debug ends */
         /* the overall spoiling behavior is the union of spoiling behavior for the safety spec and the liveness spec, or the overall non-spoiling behavior is the intersection of non-spoilers for safety AND non-spoilers for liveness */
-        SafetyAutomaton spoilers_liveness_and_safety(*spoilers_safety, *spoilers_liveness);
-        spoilers_liveness_and_safety.trim();
-
-        /* new: minimize the spoiler automaton before saving */
-        negotiation::Spoilers spoilers_overall(&spoilers_liveness_and_safety);
-        spoilers_overall.boundedBisim();
+        SafetyAutomaton spoilers_overall(*spoilers_safety, *spoilers_liveness);
+        spoilers_overall.trim();
 
         /* copy the overall spoiling behavior to the one supplied as input for storing the spoiling behaviors */
-        *spoilers=*spoilers_overall.spoilers_mini_;
+        *spoilers=spoilers_overall;
         /* if both the safety and the liveness games are sure winning, then return out_flag=2, else return out_flag=1 */
         if (flag1==2 && flag2==2) {
             out_flag=2;
