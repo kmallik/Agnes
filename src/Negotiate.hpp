@@ -145,7 +145,7 @@ public:
         negotiation::SafetyAutomaton* s = new negotiation::SafetyAutomaton();
         int flag = compute_spoilers_overall(c,s);
         /* debug */
-       s->writeToFile("Outputs/interim_overall_det.txt");
+       s->writeToFile("Outputs/spoiler.txt");
         /* debug ends */
         if (flag==0) {
             /* when the game is sure losing for component c, the negotiation fails */
@@ -167,9 +167,9 @@ public:
             if (k_act[c]==-1) {
                 k_act[c]=spoiler.k_;
             }
-            // /* debug */
-            // spoiler.spoilers_mini_->writeToFile("Outputs/interim_overall_mini.txt");
-            // /* debug ends */
+             /* debug */
+             spoiler.spoilers_mini_->writeToFile("Outputs/spoiler_mini.txt");
+             /* debug ends */
             negotiation::SafetyAutomaton guarantee_updated(*guarantee_[1-c],*spoiler.spoilers_mini_);
             guarantee_updated.trim();
             guarantee_updated.determinize();
@@ -187,9 +187,9 @@ public:
             // size_t Length = Str.copy(Char, Str.length() + 1);
             // Char[Length] = '\0';
             // guarantee_[1-c]->writeToFile(Char);
-            // /* debug */
-            // guarantee_[1-c]->writeToFile("Outputs/interim_updated_guarantee.txt");
-            // /* debug ends */
+             /* debug */
+            guarantee_updated.writeToFile("Outputs/full_guarantee.txt"); guarantee_[1-c]->writeToFile("Outputs/interim_updated_guarantee.txt");
+             /* debug ends */
             bool flag2 = recursive_negotiation(k,k_act,1-c,0);
             if (flag2) {
                 return true;

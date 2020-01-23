@@ -17,7 +17,7 @@
  /* The parameters */
  #define plant_process_cycles_ 1
  #define plant_hibernate_cycle_ 1
- #define feeder_max_wait_cycles_ 4
+ #define feeder_max_wait_cycles_ 5
 
 using namespace std;
 using namespace negotiation;
