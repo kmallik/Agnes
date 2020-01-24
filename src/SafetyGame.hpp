@@ -175,7 +175,7 @@ public:
                                     /* remove all the control inputs from the pre-states of x which lead to x */
 //                                            if (!strcmp(str,"sure")) {
                                         /* for sure winning, remove the control input */
-                                        D[*it]->erase(j);
+                                    D[*it]->erase(j);
 //                                            } else {
 //                                                /* for maybe winning, remove the joint input */
 //                                                D[*it]->erase(addr_uw(j,k));
