@@ -37,14 +37,22 @@ int main() {
     /* the liveness game */
     std::unordered_set<negotiation::abs_type> target_states = {5};
     /* allowed inputs */
-    std::vector<std::unordered_set<negotiation::abs_type>*> allowed_inputs;
+    std::vector<std::unordered_set<negotiation::abs_type>*> allowed_inputs, allowed_joint_inputs;
     for (negotiation::abs_type i=0; i<c.no_states; i++) {
-        std::unordered_set<negotiation::abs_type>* s = new std::unordered_set<negotiation::abs_type>;
-        s->insert(0);
-        allowed_inputs.push_back(s);
+        for (negotiation::abs_type ia=0; ia<assume.no_states_; ia++) {
+            for (negotiation::abs_type ig=0; ig<guarantee.no_states_; ig++) {
+                std::unordered_set<negotiation::abs_type>* s = new std::unordered_set<negotiation::abs_type>;
+                s->insert(0);
+                allowed_inputs.push_back(s);
+                std::unordered_set<negotiation::abs_type>* sj = new std::unordered_set<negotiation::abs_type>;
+                sj->insert(0);
+                sj->insert(1);
+                allowed_joint_inputs.push_back(sj);
+            }
+        }
     }
 
-    negotiation::LivenessGame monitor(c,assume,guarantee,target_states,allowed_inputs);
+    negotiation::LivenessGame monitor(c,assume,guarantee,target_states,allowed_inputs, allowed_joint_inputs);
     std::vector<std::unordered_set<negotiation::abs_type>*> sure_win=monitor.solve_liveness_game("sure");
     std::vector<std::unordered_set<negotiation::abs_type>*> maybe_win=monitor.solve_liveness_game("maybe");
 

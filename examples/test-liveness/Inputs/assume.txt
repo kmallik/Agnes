@@ -1,11 +1,10 @@
-# Initial assumption for component 1 (Feeder): TRUE
 NO_STATES (N, index 0=reject)
 2
 NO_INITIAL_STATES
 1
 INITIAL_STATE_LIST
 1
-NO_INPUTS (P, 0=nop2, 1=op2)
+NO_INPUTS (P)
 2
 TRANSITION_POST (the set of post for state-disturbance tuple (i,k) is stored in (i*P + k)-th row, where all the indices, including that of the row, start from 0)
 0

@@ -203,7 +203,7 @@ public:
     /*! Solve Buchi game with additional safety objective.
      *
      *  \param[in] str                                                  string specifying the sure/maybe winning condition
-     *  \param[out] D                                                    optimal state-input pairs */
+     *  \param[out] live_win                                     optimal state-input pairs */
     std::vector<unordered_set<abs_type>*> solve_liveness_game(const char* str="sure") {
         /* sanity check */
         if (!strcmp(str,"sure") && !strcmp(str,"maybe")) {
@@ -215,11 +215,15 @@ public:
         }
         /* a very high number used as value of losing states */
         abs_type losing = std::numeric_limits<abs_type>::max();
-        /* set of allowed inputs = non-blocking inputs (control input when str=sure, joint input when str=maybe) indexed by the state indices */
+        /* set of allowed inputs for the target states = non-blocking inputs (control input when str=sure, joint input when str=maybe) indexed by the state indices */
         std::vector<std::unordered_set<abs_type>*> D;
         for (abs_type i=0; i<no_states; i++) {
             std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
             D.push_back(s);
+            /* if i is not in target, then do not add any input for i */
+            if (monitor_target_states_.find(i) == monitor_target_states_.end()) {
+                continue;
+            }
             for (abs_type j=0; j<no_control_inputs; j++) {
                 for (abs_type k=0; k<no_dist_inputs; k++) {
                     if (no_post[addr_xuw(i,j,k)]!=0) {
@@ -248,8 +252,6 @@ public:
                 std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
                 friendly_dist.push_back(set);
             }
-//            std::queue<abs_type> Q_old=Q; /* saved copy of FIFO queue of bad states */
-//            std::unordered_set<abs_type> E_old=E; /* saved copy of bad states */
             std::vector<std::unordered_set<abs_type>*> D_old; /* saved copy of set of valid inputs indexed by the monitor state indices */
             for (abs_type i=0; i<no_states; i++) {
                 std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
@@ -275,9 +277,7 @@ public:
                         }
                     }
                 }
-                /* load the saved value of Q, E and D */
-    //            Q=Q_old;
-    //            E=E_old;
+                /* load the saved value of D */
                 for (abs_type i=0; i<no_states; i++) {
                     *D[i]=*D_old[i];
                 }
@@ -311,11 +311,7 @@ public:
                                 for (auto i2=post[l]->begin(); i2!=post[l]->end(); ++i2) {
                                     /* if the successor i2 is not in YY, then the corresponding state-action pair is unsafe */
                                     if (YY.find(*i2)==YY.end()) {
-                                        if (!strcmp(str,"sure")) {
-                                            D[*i]->erase(j);
-                                        } else {
-                                            D[*i]->erase(addr_uw(j,k));
-                                        }
+                                        D[*i]->erase(j);
                                         continue;
                                     }
                                 }
@@ -351,6 +347,7 @@ public:
                 }
             }
         } else {
+            /* compute maybe winning strategy */
             /* the outer nu variable */
             std::unordered_set<abs_type> YY, YY_old;
             for (abs_type i=0; i<no_states; i++) {
@@ -359,12 +356,14 @@ public:
             /* the inner mu variable */
             std::unordered_set<abs_type> XX;
             std::unordered_set<abs_type> safe_targets;
+//            // debug
+//            monitor_target_states_.erase(0);
+//            // debug end
             /* iterate until a fix-point of YY is reached */
             while (YY_old.size()!=YY.size()) {
                 /* save the current YY */
                 YY_old=YY;
                 /* the set of targets from which it is possible to stay in YY in the next step */
-    //            std::unordered_set<abs_type> safe_targets;
                 safe_targets.clear();
                 for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
                     /* only consider i from the intersection of YY and target */
@@ -373,20 +372,12 @@ public:
                     }
                     for (abs_type j=0; j<no_control_inputs; j++) {
                         for (abs_type k=0; k<no_dist_inputs; k++) {
-    //                        /* if the disturbance input leads to assumption violation, ignore */
-    //                        if (bad_dist[*i]->find(k)!=bad_dist[*i]->end()) {
-    //                            continue;
-    //                        }
                             /* the address to look up in the post array */
                             abs_type l=addr_xuw(*i,j,k);
                             for (auto i2=post[l]->begin(); i2!=post[l]->end(); ++i2) {
                                 /* if the successor i2 is not in YY, then the corresponding state-action pair is unsafe */
                                 if (YY.find(*i2)==YY.end()) {
-                                    if (!strcmp(str,"sure")) {
-                                        D[*i]->erase(j);
-                                    } else {
-                                        D[*i]->erase(addr_uw(j,k));
-                                    }
+                                    D[*i]->erase(addr_uw(j,k));
                                     continue;
                                 }
                             }
@@ -411,9 +402,55 @@ public:
                     }
                 }
                 YY=XX;
+                /* the states from where cooperative winning is only possible by assumption violation need to be excluded from the maybe_win region */
+                /* first compute the backward reachable states of the target (excluding 0) */
+                std::queue<abs_type> Q;
+                std::unordered_set<abs_type> seen;
+                for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
+                    if (*i!=0) {
+                        Q.push(*i);
+                        seen.insert(*i);
+                    }
+                }
+                while (Q.size()!=0) {
+                    /* pop the first element */
+                    abs_type i2 = Q.front();
+                    Q.pop();
+                    /* add all the predecessors of i2 to the queue */
+                    for (abs_type j=0; j<no_control_inputs; j++) {
+                        for (abs_type k=0; k<no_dist_inputs; k++) {
+                            for (auto i=pre[addr_xuw(i2,j,k)]->begin(); i!=pre[addr_xuw(i2,j,k)]->end(); ++i) {
+                                if (seen.find(*i)==seen.end()) {
+                                    Q.push(*i);
+                                    seen.insert(*i);
+                                }
+                            }
+                        }
+                    }
+                }
+                /* now remove all the states (except the assumption violation state 0) in the maybe winning region which are not in the backward reachable set of the target */
+                for (abs_type i=1; i<no_states; i++) {
+                    if (seen.find(i)==seen.end()) {
+                        YY.erase(i);
+                        reach_win[i]->clear();
+                    }
+                }
             }
         }
-        return reach_win;
+        /* the liveness winning strategy is union of the winning strategy of reachability and the winning strategy of safety from the winning target states */
+        std::vector<std::unordered_set<abs_type>*> live_win;
+        for (abs_type i=0; i<no_states; i++) {
+            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+            live_win.push_back(set);
+            if (D[i]->size()!=0) {
+                /* the state i is in the target, so use the safety part */
+                *live_win[i]=*D[i];
+            } else {
+                /* use the reachability strategy */
+                *live_win[i]=*reach_win[i];
+            }
+        }
+        return live_win;
     }
     /*! compute the set of spoiling behaviors in the form of a safety automaton.
      * \param[in] spoilers          pointer to the safety automaton saving the spoiling behaviors
