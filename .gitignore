@@ -8,6 +8,7 @@
 # Subfolders #
 ##############
 factory_pp*/
+mutex_dl*/
 Outputs/
 
 # Compiled source #

@@ -15,15 +15,19 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define pr1_deadline_ 15
- #define pr2_deadline_ 20
- #define pr1_max_period_ 3
- #define pr2_max_period_ 2
- #define pr1_data_size_ 8
- #define pr2_data_size_ 5
+ #define pr1_deadline_ 10
+ #define pr2_deadline_ 10
+ #define pr1_max_period_ 6
+ #define pr2_max_period_ 6
+ #define pr1_data_size_ 1
+ #define pr2_data_size_ 1
 
 using namespace std;
 using namespace negotiation;
+
+/* forward declaration of anonymous functions */
+abs_type state_id(abs_type i, abs_type j, abs_type k, abs_type l);
+abs_type post_addr(abs_type x, abs_type u, abs_type w);
 
 /*********************************************************/
 /* main computation */
@@ -38,7 +42,7 @@ int main() {
     Str_folder += "_mp_";
     Str_folder += std::to_string(pr1_max_period_);
     Str_folder += "_";
-    Str_folder += str::to_string(pr2_max_period_);
+    Str_folder += std::to_string(pr2_max_period_);
     Str_folder += "_ds_";
     Str_folder += std::to_string(pr1_data_size_);
     Str_folder += "_";
@@ -56,28 +60,22 @@ int main() {
     checkMakeDir(input_folder_name);
 
     /* put the parameters in an array */
-    int* dl[2]={pr1_deadline_, pr2_deadline_};
-    int* mp[2]={pr1_max_period_,pr2_max_period_};
-    int* ds[2]={pr1_data_size_,pr2_data_size_};
+    int dl[2]={pr1_deadline_, pr2_deadline_};
+    int mp[2]={pr1_max_period_,pr2_max_period_};
+    int ds[2]={pr1_data_size_,pr2_data_size_};
 
-    /* create the processes */
     for (int pid=0; pid<2; pid++) {
-        // /* the global countdown timer for the deadline check */
-        // int glob_time;
-        // /* the local countdown timer for the periodicity check
-        //  * started for the first time when a successful write happens for the first time */
-        // int loc_time;
-
+        /* ******** create the processes ******** */
         /* There are states related to the writing process each having four components:
          *   1: the state of one write operation ("idle" (0), "write" (1), "conflict check" (2), "conflict" (3), or "success" (4))
-         *   2: the number of packets remaining to be written (0-data size)
-         *   3: the time remaining in the global timer (0-deadline)
-         *   4: the time remaining until the next packet (0-max period).
+         *   2: the number of packets remaining to be written (1 to data size)
+         *   3: the time remaining in the global timer (deadline to 1)
+         *   4: the time remaining until the next packet (max period to 1).
          * In addition, there are three sink states:
          *   1: overall time-out (bad) -> state id 0
          *   2: period time-out (bad) -> state id 1
          *   3: task completed (good) -> state id 2 */
-        abs_type no_states = 5*(ds[pid]-1)*(dl[pid]-1)*(mp[pid]-1)+3;
+        abs_type no_states = 5*ds[pid]*dl[pid]*mp[pid] + 3;
         /* the id of the writing related states are determined using the following lambda expression */
         auto state_id = [&](abs_type i, abs_type j, abs_type k, abs_type l) -> abs_type {
             if (k==0) {
@@ -90,51 +88,78 @@ int main() {
                 /* task completed */
                 return 2;
             } else {
-                return (i*ds[pid]*dl[pid]*mp[pid] + j*dl[pid]*mp[pid] + k*mp[pid] + l + 3);
+                return (i*ds[pid]*dl[pid]*mp[pid] + (j-1)*dl[pid]*mp[pid] + (k-1)*mp[pid] + (l-1) + 3);
             }
         };
         /* the initial state is the state "idle" with all the clock being set to maximum limit */
         std::unordered_set<abs_type> init;
-        init.insert(state_id(0,ds[pid]-1,dl[pid]-1,mp[pid]-1));
+        init.insert(state_id(0,ds[pid],dl[pid],mp[pid]));
         /* control inputs:
          *  0: write
          *  1: wait
          */
-        abs_type no_control_input = 2;
+        abs_type no_control_inputs = 2;
         /* disturbance inputs:
          *  0: other process writing
          *  1: other process idle
          */
-        abs_type no_dist_input = 2;
+        abs_type no_dist_inputs = 2;
         /* outputs:
          *  0: writing
          *  1: idle
          */
-        abs_type no_output = 2;
+        abs_type no_outputs = 2;
         /* state-to-output map */
         std::vector<abs_type> state_to_output;
-        /* the sink states are in idle all the time */
-        state_to_output.push_back(1);
-        state_to_output.push_back(1);
-        state_to_output.push_back(1);
-        /* the post array */
-        std::vector<abs_type>** post = new std::vector<abs_type>*[no_states*no_control_input*no_dist_input];
-        /* iterate over all the states to compute the post */
-        int ind=0;
+        /* initialize state_to_output vector */
+        for (int i=0; i<no_states; i++) {
+            state_to_output.push_back(0);
+        }
+        /* the three sink states are always idle */
+        state_to_output[0]=1;
+        state_to_output[1]=1;
+        state_to_output[2]=1;
         for (int i=0; i<=4; i++) {
-            for (int j=ds[pid]-1; j>=0; j--) {
-                for (int k=dl[pid]-1; k>=0; k--) {
-                    for (int l=mp[pid]-1; l>=0; l--) {
-                        /* the output of a state is determined by the first component */
+            for (int j=1; j<=ds[pid]; j++) {
+                for (int k=1; k<=dl[pid]; k++) {
+                    for (int l=1; l<=mp[pid]; l++) {
                         switch (i) {
-                            case 0: state_to_output.push_back(1);
-                            case 1: state_to_output.push_back(0);
-                            case 2: state_to_output.push_back(1);
-                            case 3: state_to_output.push_back(1);
-                            case 4: state_to_output.push_back(1);
+                            case 0:
+                                state_to_output[state_id(i,j,k,l)]=1;
+                                break;
+                            case 1:
+                                state_to_output[state_id(i,j,k,l)]=0;
+                                break;
+                            case 2:
+                                state_to_output[state_id(i,j,k,l)]=1;
+                                break;
+                            case 3:
+                                state_to_output[state_id(i,j,k,l)]=1;
+                                break;
+                            case 4:
+                                state_to_output[state_id(i,j,k,l)]=1;
+                                break;
                         }
-                        for (int u=0; u<no_control_input; u++) {
-                            for (int w=0; w<no_dist_input; w++) {
+                    }
+                }
+            }
+        }
+        /* the post array */
+        std::vector<abs_type>** post = new std::vector<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
+        /* initialize post */
+        /* the sink states */
+        for (int i=0; i<3*no_control_inputs*no_dist_inputs; i++) {
+            std::vector<abs_type>* v = new std::vector<abs_type>;
+            post[i]=v;
+        }
+        /* the other states */
+        int ind=3*no_control_inputs*no_dist_inputs;
+        for (int i=0; i<=4; i++) {
+            for (int j=1; j<=ds[pid]; j++) {
+                for (int k=1; k<=dl[pid]; k++) {
+                    for (int l=1; l<=mp[pid]; l++) {
+                        for (int u=0; u<no_control_inputs; u++) {
+                            for (int w=0; w<no_dist_inputs; w++) {
                                 std::vector<abs_type>* v = new std::vector<abs_type>;
                                 post[ind]=v;
                                 ind++;
@@ -148,13 +173,21 @@ int main() {
         auto post_addr = [&](abs_type x, abs_type u, abs_type w) -> abs_type {
             return (x*no_control_inputs*no_dist_inputs + u*no_dist_inputs + w);
         };
+        /* add self loops to the sink states */
+        for (int i=0; i<3; i++) {
+            for (int u=0; u<no_control_inputs; u++) {
+                for (int w=0; w<no_dist_inputs; w++) {
+                    post[post_addr(i,u,w)]->push_back(i);
+                }
+            }
+        }
         /* iterate over all the states to compute the post */
-        for (int j=ds[pid]-1; j>=1; j--) {
-            for (int k=dl[pid]-1; k>=1; k--) {
-                for (int l=mp[pid]-1; l>=1; l--) {
+        for (int j=ds[pid]; j>=1; j--) {
+            for (int k=dl[pid]; k>=1; k--) {
+                for (int l=mp[pid]; l>=1; l--) {
                     abs_type l_updated;
                     /* don't decrement the period timer until the first time a write has occurred */
-                    if (j==ds[pid]-1) {
+                    if (j==ds[pid]) {
                         l_updated = l;
                     } else {
                         l_updated = l-1;
@@ -190,7 +223,7 @@ int main() {
         }
         /* write the description of a file */
         std::string Str_file = Str_input_folder;
-        Str_file += "/pr"
+        Str_file += "/pr_";
         Str_file += std::to_string(pid);
         Str_file += ".txt";
         create(Str_file);
@@ -202,59 +235,34 @@ int main() {
         writeMember<abs_type>(Str_file, "NO_OUTPUTS", no_outputs);
         writeVec<abs_type>(Str_file, "STATE_TO_OUTPUT", state_to_output);
         writeArrVec<abs_type>(Str_file, "TRANSITION_POST", post, no_states*no_control_inputs*no_dist_inputs);
+        
+        /* ****** create the specifications ******** */
+        /* create the safe set: all the states except the time-out states (index 0 and 1) are safe */
+        std::unordered_set<abs_type> safe_states;
+        for (abs_type i=2; i<no_states; i++) {
+            safe_states.insert(i);
+        }
+        Str_file = Str_input_folder;
+        Str_file += "/safe_states_";
+        Str_file += std::to_string(pid);
+        Str_file += ".txt";
+        create(Str_file);
+        writeMember<abs_type>(Str_file, "NO_SAFE_STATES", safe_states.size());
+        writeSet<abs_type>(Str_file, "SET_SAFE_STATES", safe_states);
+        /* create the target state set for liveness spec: the "task completed" state (index 2) */
+        std::unordered_set<abs_type> target_states;
+        target_states.insert(2);
+        Str_file = Str_input_folder;
+        Str_file += "/target_states_";
+        Str_file += std::to_string(pid);
+        Str_file += ".txt";
+        create(Str_file);
+        writeMember<abs_type>(Str_file, "NO_TARGET_STATES", target_states.size());
+        writeSet<abs_type>(Str_file, "SET_TARGET_STATES", target_states);
+        
+        delete[] post;
 
     }
-
-
-
-    /* create the safe set for the feeder: all states except "shutdown" are safe */
-    std::unordered_set<abs_type> safe_states_feeder;
-    for (abs_type i=0; i<no_states_feeder-1; i++) {
-        safe_states_feeder.insert(i);
-    }
-    Str_file = Str_input_folder;
-    Str_file += "/safe_states_feeder.txt";
-    create(Str_file);
-    writeMember<abs_type>(Str_file, "NO_SAFE_STATES", safe_states_feeder.size());
-    writeSet<abs_type>(Str_file, "SET_SAFE_STATES", safe_states_feeder);
-
-    /* create the safe set for the plant: all states are safe */
-    std::unordered_set<abs_type> safe_states_plant;
-    for (abs_type i=0; i<no_states_plant; i++) {
-        safe_states_plant.insert(i);
-    }
-    Str_file = Str_input_folder;
-    Str_file += "/safe_states_plant.txt";
-    create(Str_file);
-    writeMember<abs_type>(Str_file, "NO_SAFE_STATES", safe_states_plant.size());
-    writeSet<abs_type>(Str_file, "SET_SAFE_STATES", safe_states_plant);
-
-    /* create the target states for the feeder: all states are in the target */
-    std::unordered_set<abs_type> target_states_feeder;
-    for (abs_type i=0; i<no_states_feeder; i++) {
-        target_states_feeder.insert(i);
-    }
-    Str_file = Str_input_folder;
-    Str_file += "/target_states_feeder.txt";
-    create(Str_file);
-    writeMember<abs_type>(Str_file, "NO_TARGET_STATES", target_states_feeder.size());
-    writeSet<abs_type>(Str_file, "SET_TARGET_STATES", target_states_feeder);
-
-    /* create the target states for the plant: the two states with the highest hibernating time are in the target */
-    std::unordered_set<abs_type> target_states_plant;
-    if (plant_hibernate_cycle_>1) {
-        target_states_plant.insert(2*plant_process_cycles_+plant_hibernate_cycle_);
-        target_states_plant.insert(no_states_plant-1);
-    } else {
-        target_states_plant.insert(0);
-        target_states_plant.insert(1);
-    }
-    Str_file = Str_input_folder;
-    Str_file += "/target_states_plant.txt";
-    create(Str_file);
-    writeMember<abs_type>(Str_file, "NO_TARGET_STATES", target_states_plant.size());
-    writeSet<abs_type>(Str_file, "SET_TARGET_STATES", target_states_plant);
-
     /* copy other necessary files */
     std::string Str_copy = "cp files/Makefile ";
     Str_folder += "/";
@@ -263,14 +271,22 @@ int main() {
     Length = Str_copy.copy(char_copy, Str_copy.length() + 1);
     char_copy[Length] = '\0';
     system(char_copy);
-    Str_copy = "cp files/factory.cpp ";
+    Str_copy = "cp files/mutex.cpp ";
     Str_copy += Str_folder;
     Length = Str_copy.copy(char_copy, Str_copy.length() + 1);
     char_copy[Length] = '\0';
     system(char_copy);
+    /* create a output folder */
+    std::string Str_output_folder = Str_folder;
+    Str_output_folder += "Outputs";
+    Length = Str_output_folder.copy(char_copy, Str_output_folder.length() + 1);
+    char_copy[Length] = '\0';
+    checkMakeDir(char_copy);
 
-    delete[] post_feeder;
-    delete[] post_plant;
 
+//    delete[] dl;
+//    delete[] mp;
+//    delete[] ds;
+    
     return 1;
 }
