@@ -278,7 +278,8 @@ public:
                                         }
                                     }
                                     /* if either the assumption or the guarantee hit the bad state, then the monitor goes to one of the sink states and no other transitions are added */
-                                    if (is_assume_reject && !is_guarantee_reject) {
+//                                    if (is_assume_reject && !is_guarantee_reject) {
+                                    if (is_assume_reject) {
                                         if (post[addr_xuw(im,j,k)]->find(0) == post[addr_xuw(im,j,k)]->end()) {
                                             pre[addr_xuw(0,j,k)]->insert(im);
                                             post[addr_xuw(im,j,k)]->insert(0);
