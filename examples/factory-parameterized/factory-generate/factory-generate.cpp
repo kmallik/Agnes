@@ -54,7 +54,7 @@ int main() {
      *
      * and the pairs of variable states (counting the number of times the feeder is idle ):
      * odd numbers between 2 and no_states-2: "idle+not full"
-     * even numbers between 3 and no_states-1: "idle+full" with indices being the
+     * even numbers between 3 and no_states-1: "idle+full"
      */
     abs_type no_states_feeder=4+2*(feeder_max_wait_cycles_-1);
     /* the initial state is the state "empty" */
@@ -114,8 +114,13 @@ int main() {
     post_feeder[post_addr_feeder(1,1,1)]->push_back(3);
     post_feeder[post_addr_feeder(1,1,2)]->push_back(3);
 
-    post_feeder[post_addr_feeder(2,1,0)]->push_back(4);
-    post_feeder[post_addr_feeder(2,1,1)]->push_back(4);
+    if (feeder_max_wait_cycles_>1) {
+        post_feeder[post_addr_feeder(2,1,0)]->push_back(4);
+        post_feeder[post_addr_feeder(2,1,1)]->push_back(4);
+    } else {
+        post_feeder[post_addr_feeder(2,1,0)]->push_back(3);
+        post_feeder[post_addr_feeder(2,1,1)]->push_back(3);
+    }
     post_feeder[post_addr_feeder(2,1,2)]->push_back(3);
 
     /* transitions from rest of the states */
@@ -136,9 +141,11 @@ int main() {
         }
     }
 
-    post_feeder[post_addr_feeder(no_states_feeder-2,1,0)]->push_back(no_states_feeder-1);
-    post_feeder[post_addr_feeder(no_states_feeder-2,1,1)]->push_back(no_states_feeder-1);
-    post_feeder[post_addr_feeder(no_states_feeder-2,1,2)]->push_back(no_states_feeder-1);
+    if (feeder_max_wait_cycles_>1) {
+        post_feeder[post_addr_feeder(no_states_feeder-2,1,0)]->push_back(no_states_feeder-1);
+        post_feeder[post_addr_feeder(no_states_feeder-2,1,1)]->push_back(no_states_feeder-1);
+        post_feeder[post_addr_feeder(no_states_feeder-2,1,2)]->push_back(no_states_feeder-1);
+    }
 
     /* self loop in the shutdown state */
     post_feeder[post_addr_feeder(no_states_feeder-1,0,0)]->push_back(no_states_feeder-1);

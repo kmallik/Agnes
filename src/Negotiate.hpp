@@ -100,17 +100,19 @@ public:
             /* recursively perform the negotiation */
             std::cout << "current depth = " << k << std::endl;
             bool success = recursive_negotiation(k,k_now,starting_component,done);
-            /* if there was no change in the depth of bounded bisimulation in the first round of spoiler finding, then stop the procedure */
-            if (k_now[0]==k_old[0] && k_now[1]==k_old[1]) {
-                std::cout << "The search of spoiling behavior got saturated. No solution found. Terminating." << '\n';
-                return false;
-            } else {
-                k_old[0]=k_now[0];
-                k_old[1]=k_now[1];
-            }
             if (success) {
                 return true;
             } else {
+                /* if there was no change in the depth of bounded bisimulation in the first round of spoiler finding, then stop the procedure */
+                if (k_now[0]==k_old[0] && k_now[1]==k_old[1]) {
+                    std::cout << "The search of spoiling behavior got saturated. No solution found. Terminating." << '\n';
+                    return false;
+                } else {
+                    k_old[0]=k_now[0];
+                    k_old[1]=k_now[1];
+                    k_now[0]=-1;
+                    k_now[1]=-1;
+                }
                 /* reset the sets of guarantees */
                 guarantee_.clear();
                 /* re-initialize the sets of guarantees as all accepting safety automata */
@@ -188,7 +190,8 @@ public:
             // Char[Length] = '\0';
             // guarantee_[1-c]->writeToFile(Char);
              /* debug */
-            guarantee_updated.writeToFile("Outputs/full_guarantee.txt"); guarantee_[1-c]->writeToFile("Outputs/interim_updated_guarantee.txt");
+            guarantee_updated.writeToFile("Outputs/full_guarantee.txt");
+            guarantee_[1-c]->writeToFile("Outputs/interim_updated_guarantee.txt");
              /* debug ends */
             bool flag2 = recursive_negotiation(k,k_act,1-c,0);
             if (flag2) {
@@ -207,9 +210,9 @@ public:
         int out_flag;
         /* find the spoilers for the safety part */
         negotiation::SafetyGame monitor(*components_[c],*guarantee_[1-c],*guarantee_[c]);
-        // /* debug */
-        // monitor.writeToFile("Outputs/monitor.txt");
-        // /* debug end */
+         /* debug */
+         monitor.writeToFile("Outputs/monitor.txt");
+         /* debug end */
         std::vector<std::unordered_set<abs_type>*> sure_safe = monitor.solve_safety_game(*safe_states_[c],"sure");
         std::vector<std::unordered_set<abs_type>*> maybe_safe = monitor.solve_safety_game(*safe_states_[c],"maybe");
         SafetyAutomaton* spoilers_safety = new SafetyAutomaton;
