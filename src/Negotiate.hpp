@@ -174,12 +174,12 @@ public:
              /* debug ends */
             negotiation::SafetyAutomaton guarantee_updated(*guarantee_[1-c],*spoiler.spoilers_mini_);
             guarantee_updated.trim();
-            guarantee_updated.determinize();
-            
+            // guarantee_updated.determinize();
+
             /* new: minimize the guarantee automaton before saving */
             negotiation::Spoilers guarantee_final(&guarantee_updated);
             guarantee_final.boundedBisim();
-            
+
             *guarantee_[1-c]=*guarantee_final.spoilers_mini_;
             // /* save the updated guarantee */
             // Str += "Outputs/G";
@@ -226,8 +226,8 @@ public:
 //        spoilers_safety->writeToFile("Outputs/interim_safe.txt");
         /* end of debugging */
         spoilers_safety->trim();
-        spoilers_safety->determinize();
-        
+        // spoilers_safety->determinize();
+
         /* new: minimize the spoiler_safet automaton  */
         negotiation::Spoilers safety(spoilers_safety);
         safety.boundedBisim();
@@ -280,7 +280,7 @@ public:
 //        spoilers_safety->writeToFile("Outputs/interim_safe.txt");
 //         /* debug ends */
         spoilers_liveness->trim();
-        spoilers_liveness->determinize();
+        // spoilers_liveness->determinize();
         /* new: minimize the spoiler_safet automaton  */
         negotiation::Spoilers liveness(spoilers_liveness);
         liveness.boundedBisim();
@@ -291,7 +291,7 @@ public:
 //        SafetyAutomaton spoilers_overall(*spoilers_safety, *spoilers_liveness);
         SafetyAutomaton spoilers_overall(*safety.spoilers_mini_, *liveness.spoilers_mini_);
         spoilers_overall.trim();
-        
+
         /* new: minimize the spoiler_overall automaton  */
         negotiation::Spoilers overall(&spoilers_overall);
         overall.boundedBisim();

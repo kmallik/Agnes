@@ -15,8 +15,8 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define pr1_deadline_ 10
- #define pr2_deadline_ 10
+ #define pr1_deadline_ 15
+ #define pr2_deadline_ 15
  #define pr1_max_period_ 6
  #define pr2_max_period_ 6
  #define pr1_data_size_ 1
@@ -54,7 +54,7 @@ int main() {
 
     std::string Str_input_folder = Str_folder;
     Str_input_folder += "/Inputs";
-    char input_folder_name[20];
+    char input_folder_name[35];
     Length = Str_input_folder.copy(input_folder_name, Str_input_folder.length() + 1);
     input_folder_name[Length] = '\0';
     checkMakeDir(input_folder_name);
@@ -235,7 +235,7 @@ int main() {
         writeMember<abs_type>(Str_file, "NO_OUTPUTS", no_outputs);
         writeVec<abs_type>(Str_file, "STATE_TO_OUTPUT", state_to_output);
         writeArrVec<abs_type>(Str_file, "TRANSITION_POST", post, no_states*no_control_inputs*no_dist_inputs);
-        
+
         /* ****** create the specifications ******** */
         /* create the safe set: all the states except the time-out states (index 0 and 1) are safe */
         std::unordered_set<abs_type> safe_states;
@@ -259,7 +259,7 @@ int main() {
         create(Str_file);
         writeMember<abs_type>(Str_file, "NO_TARGET_STATES", target_states.size());
         writeSet<abs_type>(Str_file, "SET_TARGET_STATES", target_states);
-        
+
         delete[] post;
 
     }
@@ -287,6 +287,6 @@ int main() {
 //    delete[] dl;
 //    delete[] mp;
 //    delete[] ds;
-    
+
     return 1;
 }

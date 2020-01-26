@@ -11,7 +11,7 @@
 # NO_OUTPUTS (0=nop1, 1=op1)
 2
 # STATE_TO_OUTPUT
-0
+1
 0
 1
 1
