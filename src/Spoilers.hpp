@@ -178,12 +178,6 @@ public:
         /* if at least some states are to be refined then the index k is incremented */
         if (to_refine.size()!=0) {
             k_++;
-            // /* all the remaining abstract states which are not yet refined are also marked refined at this point */
-            // for (abs_type i=0; i<spoilers_mini_->no_states_; i++) {
-            //     if (refined_partitions_.find(i)==refined_partitions_.end()) {
-            //         refined_partitions_.insert(i);
-            //     }
-            // }
         }
         /* refine until no more refinement of the frontier states are possible */
         while (to_refine.size()!=0) {
@@ -239,11 +233,139 @@ public:
             }
         }
     }
+    /*! The new one-step refinement of abstract states
+     *      Whtat's new: (1) The frontier states are not refined further
+                          (2) The splits are allowed to be over-lapping */
+    void refineQuotient2() {
+        /* S1, S2 are used to store the overlapping and non-overlapping pre states respectively */
+        std::unordered_set<abs_type> S1, S2;
+        /* copy the current quotients and refinement status */
+        abs_type new_no_states = spoilers_mini_->no_states_;
+        std::unordered_set<abs_type> refined_partitions_new = refined_partitions_;
+        std::vector<std::unordered_set<abs_type>*> quotient_new, inv_quotient_new;
+        for (int i=0; i<quotient_.size(); i++) {
+            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>(*quotient_[i]);
+            quotient_new.push_back(set);
+        }
+        for (int i=0; i<inv_quotient_.size(); i++) {
+            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>(*inv_quotient_[i]);
+            inv_quotient_new.push_back(set);
+        }
+        /* collect all the frontier states which are in 1-step existential predecessor of the already refined states */
+        /* iterate over all the abstract states which have not been refined */
+        for (abs_type i=0; i<spoilers_mini_->no_states_; i++) {
+            if (refined_partitions_.find(i)!=refined_partitions_.end()) {
+                continue;
+            }
+            /* keep track whether the current abstract state gets refined or not */
+            bool this_state_got_refined=false;
+            /* iterate over all the abstract states which have been refined */
+            for (std::unordered_set<abs_type>::iterator it=refined_partitions_.begin(); it!=refined_partitions_.end(); ++it) {
+                /* iterate over all the inputs */
+                for (abs_type j=0; j<spoilers_mini_->no_inputs_; j++) {
+                    /* compute the set of concrete predecessor states (S1) which intersect with i, and the set of concrete predecessor states (S2) which do not intersect with i */
+                    S1.clear();
+                    S2.clear();
+                    computeOverlappingPre(i,*it,j,S1,S2);
+                    /* if both S1, S2 are non-empty then i has to be split into two parts */
+                    if (S1.size()!=0 && S2.size()!=0) {
+                        this_state_got_refined=true;
+                        /* a new abstract state is added */
+                        new_no_states++;
+                        /* S1 is stored in the newly created abstract state */
+                        // quotient_[i]->clear();
+                        std::unordered_set<abs_type>* R = new std::unordered_set<abs_type>;
+                        for (std::unordered_set<abs_type>::iterator k=S1.begin(); k!=S1.end(); ++k) {
+                            // quotient_[i]->insert(*k);
+                            R->insert(*k);
+                            inv_quotient_new[*k]->erase(i);
+                            // inv_quotient_[*k]->insert(i);
+                            inv_quotient_new[*k]->insert(new_no_states-1);
+                        }
+                        quotient_new.push_back(R);
+                        refined_partitions_new.insert(new_no_states-1);
+                        /* a new abstract state is added */
+                        new_no_states++;
+                        /* S2 is stored in the newly created abstract state */
+                        std::unordered_set<abs_type>* S = new std::unordered_set<abs_type>;
+                        for (std::unordered_set<abs_type>::iterator k=S2.begin(); k!=S2.end(); ++k) {
+                            S->insert(*k);
+                            // inv_quotient_[*k]->clear();
+                            inv_quotient_new[*k]->erase(i);
+                            inv_quotient_new[*k]->insert(new_no_states-1);
+                        }
+                        quotient_new.push_back(S);
+                        refined_partitions_new.insert(new_no_states-1);
+                    }
+                }
+            }
+            /* if state i got refined, then delete the content of abstract state i */
+            if (this_state_got_refined) {
+                refined_partitions_new.erase(i);
+                quotient_new[i]->clear();
+            }
+        }
+        /* if at least some states were refined then there are updates needed */
+        if (refined_partitions_new.size()>refined_partitions_.size()) {
+            /* increment the current depth of refinement */
+            k_++;
+            /* replace the old number of states with the new number of states */
+            spoilers_mini_->no_states_=new_no_states;
+            /* replace the old quotient mapping with the new quotient mapping */
+            quotient_.clear();
+            for (int i=0; i<quotient_new.size(); i++) {
+                std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>(*quotient_new[i]);
+                quotient_.push_back(set);
+            }
+            /* replace the old inverse quotient mappings with the new inverse quotient mappings */
+            inv_quotient_.clear();
+            for (int i=0; i<inv_quotient_new.size(); i++) {
+                std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>(*inv_quotient_new[i]);
+                inv_quotient_.push_back(set);
+            }
+            /* update the refined partitions list */
+            refined_partitions_.clear();
+            refined_partitions_=refined_partitions_new;
+            /* clean-up: re-asign indices to the quotients so that there is not empty state in the middle */
+            bool reached_end=false;
+            int index=0;
+            while (!reached_end) {
+                if (quotient_[index]->size()!=0) {
+                    index++;
+                    if (index >= quotient_.size()) {
+                        reached_end=true;
+                    }
+                    continue;
+                }
+                /* move the last state in quotient to the current index to fill the gap */
+                *quotient_[index]=*quotient_.back();
+                for (auto i=quotient_[index]->begin(); i!=quotient_[index]->end(); ++i) {
+                    inv_quotient_[*i]->erase(quotient_.size()-1);
+                    inv_quotient_[*i]->insert(index);
+                }
+                if (refined_partitions_.find(quotient_.size()-1)!=refined_partitions_.end()) {
+                    refined_partitions_.erase(quotient_.size()-1);
+                    refined_partitions_.insert(index);
+                }
+                quotient_.pop_back();
+                spoilers_mini_->no_states_--;
+                index++;
+            }
+            /* update the initial states: an abstract state is initial if there is some concrete initial state in it */
+            spoilers_mini_->init_.clear();
+            for (auto i=spoilers_full_->init_.begin(); i!=spoilers_full_->init_.end(); ++i) {
+                for (auto i2=inv_quotient_[*i]->begin(); i2!=inv_quotient_[*i]->end(); ++i2) {
+                    spoilers_mini_->init_.insert(*i2);
+                }
+            }
+        }
+
+    }
     /*! Perform k-steps of the bounded bisimulation algorithm.
      * \param[in] k         number of refinement iterations */
     void boundedBisim(int k=INT_MAX) {
         for (int i=0; i<k; i++) {
-            refineQuotient();
+            refineQuotient2();
             /* if the refinement didn't produce new partition, then terminate the bounded bisimulation procedure */
             if (k_==i) {
                 break;
