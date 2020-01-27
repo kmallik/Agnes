@@ -141,8 +141,11 @@ public:
         /* save the abstract states which have been already refined completely */
         std::unordered_set<abs_type> refined_old = refined_partitions_;
         /* collect all the frontier states which are in 1-step existential predecessor of the already refined states */
-        /* iterate over all the abstract states */
+        /* iterate over all the abstract states which have not been refined */
         for (abs_type i=0; i<spoilers_mini_->no_states_; i++) {
+            if (refined_partitions_.find(i)!=refined_partitions_.end()) {
+                continue;
+            }
             /* iterate over all the abstract states which have been refined */
             for (std::unordered_set<abs_type>::iterator it=refined_partitions_.begin(); it!=refined_partitions_.end(); ++it) {
                 /* iterate over all the inputs */
@@ -235,7 +238,9 @@ public:
     }
     /*! The new one-step refinement of abstract states
      *      Whtat's new: (1) The frontier states are not refined further
-                          (2) The splits are allowed to be over-lapping */
+                          (2) The splits are allowed to be over-lapping
+     *
+     *  WARNING: not functional, buggy                        */
     void refineQuotient2() {
         /* S1, S2 are used to store the overlapping and non-overlapping pre states respectively */
         std::unordered_set<abs_type> S1, S2;
@@ -365,7 +370,7 @@ public:
      * \param[in] k         number of refinement iterations */
     void boundedBisim(int k=INT_MAX) {
         for (int i=0; i<k; i++) {
-            refineQuotient2();
+            refineQuotient();
             /* if the refinement didn't produce new partition, then terminate the bounded bisimulation procedure */
             if (k_==i) {
                 break;
