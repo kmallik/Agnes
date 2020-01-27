@@ -154,13 +154,12 @@ public:
     //                    }
                     }
                 }
-                /* load the saved value of Q, E and D */
-                Q=Q_old;
-                E=E_old;
+                // /* load the saved value of Q, E and D */
+                // Q=Q_old;
+                // E=E_old;
                 for (abs_type i=0; i<no_states; i++) {
                     *D[i]=*D_old[i];
                 }
-                
                 /* iterate until Q is empty, i.e. when a fixed point is reached*/
                 while (Q.size()!=0) {
                     abs_type x = Q.front();
@@ -202,6 +201,22 @@ public:
                         fixpoint_reached=false;
                     }
                 }
+                /* Set updates for the next round:
+                 *  - Q for the next round contains all the states declared unsafe which were in the assumption violation frontier
+                 *  - Clear all the friendly disturbances
+                 *  - Remove all the states from assumption violation frontiers which were declared unsafe */
+                for (abs_type i=0; i<no_states; i++) {
+                    if (W_assumption_frontier.find(i)!=W_assumption_frontier.end()) {
+                        friendly_dist[i]->clear();
+                        if (E.find(i)!=E.end()) {
+                            Q.push(i);
+                        } else {
+                            W_assumption_frontier.erase(i);
+                        }
+                    }
+                }
+                /* the original unsafe states (guarantee violation and monitor unsafe states) are always in Q */
+                Q=Q_old;
             }
         } else {
             /* iterate until Q is empty, i.e. when a fixed point is reached*/
@@ -226,10 +241,10 @@ public:
                 }
             }
         }
-        
-        
-        
-        
+
+
+
+
         // /* winning strategy in terms of the component state indices */
         // std::vector<std::unordered_set<abs_type>*> winning_strategy;
         // for (abs_type ic=0; ic<no_comp_states; ic++) {

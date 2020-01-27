@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <cstring>
 
 /**
  *  @brief Some basic operations for reading inputs and writing output.
@@ -358,9 +359,20 @@ void create(const std::string& filename) {
 }
 /* some functions for writing data to file */
 template<class T>
-void writeMember(const std::string& filename, const std::string& member_name, T member_value) {
+void writeMember(const std::string& filename, const std::string& member_name, T member_value, const char* mode="a") {
     std::ofstream file;
-    file.open(filename, std::ios_base::app);
+    if (!strcmp(mode,"a")) {
+        file.open(filename, std::ios_base::app);
+    } else if (!strcmp(mode,"w")) {
+        file.open(filename, std::ios_base::out);
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeMember: Invalid mode.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
+
     if (file.is_open()) {
         file << "# " << member_name << "\n";
         file << member_value << "\n";
@@ -376,9 +388,19 @@ void writeMember(const std::string& filename, const std::string& member_name, T 
 
 /* write 1-dimensional integer vector to file */
 template<class T>
-void writeVec(const std::string& filename, const std::string& vec_name, std::vector<T>& v) {
+void writeVec(const std::string& filename, const std::string& vec_name, std::vector<T>& v, const char* mode="a") {
     std::ofstream file;
-    file.open(filename, std::ios_base::app);
+    if (!strcmp(mode,"a")) {
+        file.open(filename, std::ios_base::app);
+    } else if (!strcmp(mode,"w")) {
+        file.open(filename, std::ios_base::out);
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeVec: Invalid mode.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
     if (file.is_open()) {
         file << "# " << vec_name << "\n";
         for (int i=0; i<v.size(); i++) {
@@ -396,9 +418,19 @@ void writeVec(const std::string& filename, const std::string& vec_name, std::vec
 
 /* write 1-dimensional integer set (unordered) to file */
 template<class T>
-void writeSet(const std::string& filename, const std::string& set_name, std::unordered_set<T>& s) {
+void writeSet(const std::string& filename, const std::string& set_name, std::unordered_set<T>& s, const char* mode="a") {
     std::ofstream file;
-    file.open(filename, std::ios_base::app);
+    if (!strcmp(mode,"a")) {
+        file.open(filename, std::ios_base::app);
+    } else if (!strcmp(mode,"w")) {
+        file.open(filename, std::ios_base::out);
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeSet: Invalid mode.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
     if (file.is_open()) {
         file << "# " << set_name << "\n";
         for (auto i=s.begin(); i!=s.end(); ++i) {
@@ -416,9 +448,19 @@ void writeSet(const std::string& filename, const std::string& set_name, std::uno
 
 /* write array of vectors (can be thought of as a 2-d table) from file */
 template<class T>
-void writeArrVec(const std::string& filename, const std::string& arr_name, std::vector<T>** arr, size_t no_elem) {
+void writeArrVec(const std::string& filename, const std::string& arr_name, std::vector<T>** arr, size_t no_elem, const char* mode="a") {
     std::ofstream file;
-    file.open(filename, std::ios_base::app);
+    if (!strcmp(mode,"a")) {
+        file.open(filename, std::ios_base::app);
+    } else if (!strcmp(mode,"w")) {
+        file.open(filename, std::ios_base::out);
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeArrVec: Invalid mode.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
     if (file.is_open()) {
         file << "# " << arr_name << "\n";
         for (int i=0; i<no_elem; i++) {
@@ -434,7 +476,7 @@ void writeArrVec(const std::string& filename, const std::string& arr_name, std::
         file.close();
     } else {
         try {
-            throw std::runtime_error("FileHandler:readArrVec: Unable to open input file.");
+            throw std::runtime_error("FileHandler:writeArrVec: Unable to open input file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
         }
@@ -443,9 +485,19 @@ void writeArrVec(const std::string& filename, const std::string& arr_name, std::
 
 /* write array of unordered sets (can be thought of as a 2-d table) to file */
 template<class T>
-void writeArrSet(const std::string& filename, const std::string& arr_name, std::unordered_set<T>** arr, size_t no_elem) {
+void writeArrSet(const std::string& filename, const std::string& arr_name, std::unordered_set<T>** arr, size_t no_elem, const char* mode="a") {
     std::ofstream file;
-    file.open(filename, std::ios_base::app);
+    if (!strcmp(mode,"a")) {
+        file.open(filename, std::ios_base::app);
+    } else if (!strcmp(mode,"w")) {
+        file.open(filename, std::ios_base::out);
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeArrSet: Invalid mode.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
     if (file.is_open()) {
         file << "# " << arr_name << "\n";
         for (int i=0; i<no_elem; i++) {
@@ -461,7 +513,44 @@ void writeArrSet(const std::string& filename, const std::string& arr_name, std::
         file.close();
     } else {
         try {
-            throw std::runtime_error("FileHandler:readArrVec: Unable to open input file.");
+            throw std::runtime_error("FileHandler:writeArrVec: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
+}
+
+/* write vector of references to unordered sets (can be thought of as a 2-d table) to file */
+template<class T>
+void writeVecSet(const std::string& filename, const std::string& vec_name, std::vector<std::unordered_set<T>*> vec, const char* mode="a") {
+    std::ofstream file;
+    if (!strcmp(mode,"a")) {
+        file.open(filename, std::ios_base::app);
+    } else if (!strcmp(mode,"w")) {
+        file.open(filename, std::ios_base::out);
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeVecSet: Invalid mode.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
+    if (file.is_open()) {
+        file << "# " << vec_name << "\n";
+        for (int i=0; i<vec.size(); i++) {
+            if (vec[i]->size()==0) {
+                file << "x\n";
+            } else {
+                for (auto it=vec[i]->begin(); it!=vec[i]->end(); it++) {
+                    file << (*it) << " ";
+                }
+                file << "\n";
+            }
+        }
+        file.close();
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeVecSet: Unable to open input file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
         }

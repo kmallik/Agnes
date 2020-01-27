@@ -54,8 +54,8 @@ public:
                 }
             }
         }
-        // /* avoid state: the guarantee violation */
-        // monitor_avoid_states_.insert(1);
+        /* avoid state: the guarantee violation */
+        monitor_avoid_states_.insert(1);
         // /* allowed inputs */
         // for (abs_type im=0; im<no_states; im++) {
         //     std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
@@ -152,7 +152,9 @@ public:
                         np+=no_post[addr_xuw(i,j,k)];
                     }
                 }
-                K.push_back(np);
+                if (!strcmp(str,"sure")) {
+                    K.push_back(np);
+                }
             }
         }
         /* until the queue is empty */
@@ -173,7 +175,7 @@ public:
                         if (!strcmp(str,"sure")) {
                             /* if the current disturbance input is friendly, then all the non-deterministic posts are favorable, otherwise just one post (leading to x) is favorable */
                             if (friendly_dist[*it]->find(k)!=friendly_dist[*it]->end()) {
-                                K[addr_xu(*it,j)]= K[addr_xu(*it,j)]- no_post[addr_xuw(x,j,k)];
+                                K[addr_xu(*it,j)]= K[addr_xu(*it,j)]- no_post[addr_xuw(*it,j,k)];
                             } else {
                                 K[addr_xu(*it,j)]--;
                             }
@@ -206,7 +208,7 @@ public:
      *  \param[out] live_win                                     optimal state-input pairs */
     std::vector<unordered_set<abs_type>*> solve_liveness_game(const char* str="sure") {
         /* sanity check */
-        if (!strcmp(str,"sure") && !strcmp(str,"maybe")) {
+        if (strcmp(str,"sure") && strcmp(str,"maybe")) {
             try {
                 throw std::runtime_error("Liveness Game: invalid input.");
             } catch (std::exception& e) {
@@ -258,6 +260,8 @@ public:
                 D_old.push_back(set);
                 *D_old[i]=*D[i];
             }
+            /* save the monitor avoid states for later restoration */
+            std::unordered_set<abs_type> monitor_avoid_states_old=monitor_avoid_states_;
             while (!fixpoint_reached) {
                 /* update the list of friendly disturbances */
                 std::unordered_set<abs_type> WW=W_assumption_frontier;
@@ -293,7 +297,7 @@ public:
                 while (YY_old.size()!=YY.size()) {
                     /* save the current YY */
                     YY_old=YY;
-                    /* the set of targets from which it is possible to stay in YY in the next step */
+                    /* the set of targets from which it is possible to stay in YY while avoiding the avoid states in the next step */
                     safe_targets.clear();
                     for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
                         /* only consider i from the intersection of YY and target */
@@ -309,8 +313,9 @@ public:
                                 /* the address to look up in the post array */
                                 abs_type l=addr_xuw(*i,j,k);
                                 for (auto i2=post[l]->begin(); i2!=post[l]->end(); ++i2) {
-                                    /* if the successor i2 is not in YY, then the corresponding state-action pair is unsafe */
-                                    if (YY.find(*i2)==YY.end()) {
+                                    /* if the successor i2 is not in YY or hits the avoid state, then the corresponding state-action pair is unsafe */
+                                    if (YY.find(*i2)==YY.end() ||
+                                        monitor_avoid_states_.find(*i2)!=monitor_avoid_states_.end()) {
                                         D[*i]->erase(j);
                                         continue;
                                     }
@@ -328,6 +333,10 @@ public:
                     /* solve reach_avoid_game on monitor2 */
                     reach_win.clear();
                     reach_win=monitor2.solve_reach_avoid_game(str, friendly_dist);
+                    /* debug */
+                    monitor2.writeToFile("Outputs/monitor.txt");
+                    writeVecSet("Outputs/interim_reach_win.txt","REACH_WIN",reach_win,"w");
+                    /* debug end */
                     /* create a vector of the winning states in the reach_avoid game */
                     XX.clear();
                     for (abs_type i=0; i<no_states; i++) {
@@ -345,7 +354,22 @@ public:
                         fixpoint_reached=false;
                     }
                 }
+                /* Set updates for the next round:
+                 *  - Clear all the friendly disturbances
+                 *  - Mark all the states "avoid" which were in the assumption violation frontier and were declared unsafe */
+                for (abs_type i=0; i<no_states; i++) {
+                    if (W_assumption_frontier.find(i)!=W_assumption_frontier.end()) {
+                        friendly_dist[i]->clear();
+                        if (YY.find(i)!=YY.end()) {
+                            monitor_avoid_states_.insert(i);
+                        } else {
+                            W_assumption_frontier.erase(i);
+                        }
+                    }
+                }
             }
+            /* restore the original monitor avoid states */
+            monitor_avoid_states_=monitor_avoid_states_old;
         } else {
             /* compute maybe winning strategy */
             /* the outer nu variable */
@@ -461,6 +485,9 @@ public:
 //        negotiation::SafetyAutomaton spoilers;
         /* solve the liveness game with sure semantics */
         std::vector<unordered_set<abs_type>*> sure_win = solve_liveness_game("sure");
+        /* debugging */
+        writeVecSet("Outputs/sure_live.txt","SURE_LIVE",sure_win,"w");
+        /* end of debugging */
         /* if all the initial states are sure winning, then the set of spoiling behaviors is empty */
         bool allInitSureWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
@@ -478,6 +505,9 @@ public:
         }
         /* solve the liveness game with maybe semantics */
         std::vector<unordered_set<abs_type>*> maybe_win = solve_liveness_game("maybe");
+        /* debugging */
+        writeVecSet("Outputs/maybe_live.txt","MAYBE_LIVE",maybe_win,"w");
+        /* end of debugging */
         /* if not all the initial states are maybe winning, then no negotiation is possible: return false */
         bool allInitMaybeWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {

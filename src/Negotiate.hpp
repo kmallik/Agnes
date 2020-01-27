@@ -191,7 +191,8 @@ public:
             // guarantee_[1-c]->writeToFile(Char);
              /* debug */
             guarantee_updated.writeToFile("Outputs/full_guarantee.txt");
-            guarantee_[1-c]->writeToFile("Outputs/interim_updated_guarantee.txt");
+            guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
+            guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
              /* debug ends */
             bool flag2 = recursive_negotiation(k,k_act,1-c,0);
             if (flag2) {
@@ -223,7 +224,9 @@ public:
             return out_flag;
         }
         /* debugging */
-//        spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+        // spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+        writeVecSet("Outputs/sure_safe.txt","SURE_SAFE",sure_safe,"w");
+        writeVecSet("Outputs/maybe_safe.txt","MAYBE_SAFE",maybe_safe,"w");
         /* end of debugging */
         spoilers_safety->trim();
         // spoilers_safety->determinize();
