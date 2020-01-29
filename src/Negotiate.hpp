@@ -203,7 +203,7 @@ public:
         }
     }
     /*! Find the overall spoiling behavior for a given component in the form of a safety automaton.
-     * \param[in] c                      the component index
+     * \param[in] c             the component index
      * \param[in] spoilers      the pointer to the safety automaton storing the spoiling behaviors
      * \param[out] out_flag   0 -> some initial states are sure losing, 2 -> all initial states are sure winning, 1-> otherwise. */
     int compute_spoilers_overall(const int c, negotiation::SafetyAutomaton* spoilers) {
@@ -214,7 +214,13 @@ public:
          /* debug */
          monitor.writeToFile("Outputs/monitor.txt");
          /* debug end */
+        //  /* experimental: to avoid direct help from falsifying the assumption */
+        // safe_states_[c]->erase(0);
+        //  /* experimental ends */
         std::vector<std::unordered_set<abs_type>*> sure_safe = monitor.solve_safety_game(*safe_states_[c],"sure");
+        // /* experimental (restoration) */
+        // safe_states_[c]->insert(0);
+        // /* experimental ends */
         std::vector<std::unordered_set<abs_type>*> maybe_safe = monitor.solve_safety_game(*safe_states_[c],"maybe");
         SafetyAutomaton* spoilers_safety = new SafetyAutomaton;
         int flag1 = monitor.find_spoilers(sure_safe, maybe_safe, spoilers_safety);
@@ -249,19 +255,27 @@ public:
         // }
         /* find the spoilers for the liveness part (with the strategies being already restricted by the strategy obtained during the synthesis of the maybe safety controller) */
         SafetyAutomaton* spoilers_liveness = new SafetyAutomaton;
-        // std::vector<std::unordered_set<abs_type>*> allowed_inputs;
-        // for (abs_type i=0; i<monitor.no_states; i++) {
-        //     std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
-        //     for (auto j=sure_safe[i]->begin(); j!=sure_safe[i]->end(); ++j) {
-        //         s->insert(*j);
-        //     }
-        //     for (auto l=maybe_safe[i]->begin(); l!=maybe_safe[i]->end(); ++l) {
-        //         abs_type j= components_[c]->cont_ind(*l);
-        //         s->insert(j);
-        //     }
-        //     allowed_inputs.push_back(s);
-        // }
-        negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], sure_safe, maybe_safe);
+        std::vector<std::unordered_set<abs_type>*> allowed_joint_inputs;
+        if (flag1==2) {
+            /* if the safety game was sure winning, then the only restriction on input choices during the liveness game part comes from the sure winning strategy */
+            for (abs_type i=0; i<monitor.no_states; i++) {
+                std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
+                for (auto l=sure_safe[i]->begin(); l!=sure_safe[i]->end(); ++l) {
+                    for (abs_type k=0; k<monitor.no_dist_inputs; k++) {
+                        s->insert(monitor.addr_uw(*l,k));
+                    }
+                }
+                allowed_joint_inputs.push_back(s);
+            }
+        } else {
+            /* otherwise, the restriction on joint inputs come from the maybe winning strategy (the spoiler automaton comupted from the safety part will take care of the fact that the correct disturbance inputs are available at the correct point) */
+            for (abs_type i=0; i<monitor.no_states; i++) {
+                std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
+                *s=*maybe_safe[i];
+                allowed_joint_inputs.push_back(s);
+            }
+        }
+        negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], sure_safe, allowed_joint_inputs);
         // /* here the assumption is that the state space of monitor_safe and of monitor_live are the same (because allowed_inputs uses the same state space) */
         // // negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], allowed_inputs);
         // /* new: the assumption is updated with the spoilers from the safety part */
@@ -278,18 +292,18 @@ public:
             out_flag=0;
             return out_flag;
         }
-//         /* debug */
-//         spoilers_liveness->writeToFile("Outputs/interim_live.txt");
-//        spoilers_safety->writeToFile("Outputs/interim_safe.txt");
-//         /* debug ends */
+        /* debug */
+        spoilers_liveness->writeToFile("Outputs/interim_live.txt");
+       spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+        /* debug ends */
         spoilers_liveness->trim();
         // spoilers_liveness->determinize();
         /* new: minimize the spoiler_safet automaton  */
         negotiation::Spoilers liveness(spoilers_liveness);
         liveness.boundedBisim();
-        // /* debug */
-        // spoilers_liveness->writeToFile("Outputs/interim_live_det.txt");
-        // /* debug ends */
+        /* debug */
+        spoilers_liveness->writeToFile("Outputs/interim_live_det.txt");
+        /* debug ends */
         /* the overall spoiling behavior is the union of spoiling behavior for the safety spec and the liveness spec, or the overall non-spoiling behavior is the intersection of non-spoilers for safety AND non-spoilers for liveness */
 //        SafetyAutomaton spoilers_overall(*spoilers_safety, *spoilers_liveness);
         SafetyAutomaton spoilers_overall(*safety.spoilers_mini_, *liveness.spoilers_mini_);

@@ -180,6 +180,10 @@ public:
                                 K[addr_xu(*it,j)]--;
                             }
                             M[addr_xu(*it,j)] = (M[addr_xu(*it,j)]>=1+V[x] ? M[addr_xu(*it,j)] : 1+V[x]);
+                            /* debug */
+                            writeVec("Outputs/interim_processed_posts.txt","PROCESSED_POSTS",K,"w");
+                            writeVec("Outputs/max_value.txt","MAX_VALUE",M,"w");
+                            /* debug ends */
                             if (!K[addr_xu(*it,j)] && V[*it]>M[addr_xu(*it,j)]) {
                                 Q.push(*it);
                                 V[*it]=M[addr_xu(*it,j)];
@@ -215,6 +219,12 @@ public:
                 std::cout << e.what() << "\n";
             }
         }
+        // /* experimental: "maybe" doesn't consider 0 as target (nor unsafe), but "sure" does */
+        // if (!strcmp(str,"sure")) {
+        //     monitor_target_states_.insert(0);
+        // } else {
+        //     monitor_target_states_.erase(0);
+        // }
         /* a very high number used as value of losing states */
         abs_type losing = std::numeric_limits<abs_type>::max();
         /* set of allowed inputs for the target states = non-blocking inputs (control input when str=sure, joint input when str=maybe) indexed by the state indices */
@@ -242,17 +252,17 @@ public:
         /* the winning strategy (to be output) */
         std::vector<unordered_set<abs_type>*> reach_win;
         if (!strcmp(str,"sure")) {
-            /* the set of states from which the game is sure winning (initially only 0) */
-            std::unordered_set<abs_type> W={0};
+            // /* the set of states from which the game is sure winning (initially only 0) */
+            // std::unordered_set<abs_type> W={0};
             /* the set of states from which the game is sure winning unless the assumption is falsified (initially only 0) */
             std::unordered_set<abs_type> W_assumption_frontier={0};
-            /* flag for checking convergence */
-            bool fixpoint_reached=false;
             /* set of friendly disturbance inputs (which lead to assumption falsifying sure winning states) per state */
-            std::vector<std::unordered_set<abs_type>*> friendly_dist;
+            std::vector<std::unordered_set<abs_type>*> friendly_dist, friendly_dist_seen;
             for (abs_type i=0; i<no_states; i++) {
                 std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
                 friendly_dist.push_back(set);
+                std::unordered_set<abs_type>* set2 = new std::unordered_set<abs_type>;
+                friendly_dist_seen.push_back(set2);
             }
             std::vector<std::unordered_set<abs_type>*> D_old; /* saved copy of set of valid inputs indexed by the monitor state indices */
             for (abs_type i=0; i<no_states; i++) {
@@ -262,21 +272,44 @@ public:
             }
             /* save the monitor avoid states for later restoration */
             std::unordered_set<abs_type> monitor_avoid_states_old=monitor_avoid_states_;
-            while (!fixpoint_reached) {
+            while (1) {
                 /* update the list of friendly disturbances */
                 std::unordered_set<abs_type> WW=W_assumption_frontier;
+                W_assumption_frontier.clear();
+                /* flag for checking convergence */
+                bool fixpoint_reached=true;
                 for (auto i=WW.begin(); i!=WW.end(); ++i) {
-                    /* if the current state in the frontier is not in the winning region, then ignore */
-                    if (W.find(*i)==W.end()) {
-                        continue;
-                    }
+                    // /* if the current state in the frontier is not in the winning region, then ignore */
+                    // if (W.find(*i)==W.end()) {
+                    //     continue;
+                    // }
                     for (abs_type k=0; k<no_dist_inputs; k++) {
                         /* check if the disturbance k could lead to (non-determinism is resolved existentially) the winning part of the assumption frontier from state i */
                         for (abs_type j=0; j<no_control_inputs; j++) {
                             std::unordered_set<abs_type> p = *pre[addr_xuw(*i,j,k)];
                             for (auto i2=p.begin(); i2!=p.end(); ++i2) {
-                                friendly_dist[*i2]->insert(k);
-                                W_assumption_frontier.insert(*i2);
+                                if (friendly_dist_seen[*i2]->find(k)==friendly_dist_seen[*i2]->end()) {
+                                    /* if k leads to an unsafe state no matter what control input we choose, then k is not friendly */
+                                    bool is_friendly;
+                                    for (abs_type j2=0; j2<no_control_inputs; j2++) {
+                                        is_friendly=true;
+                                        for (auto q=monitor_avoid_states_.begin(); q!=monitor_avoid_states_.end(); ++q) {
+                                            if (post[addr_xuw(*i2,j2,k)]->find(*q) != post[addr_xuw(*i2,j2,k)]->end()) {
+                                                is_friendly=false;
+                                                break;
+                                            }
+                                        }
+                                        if (is_friendly) {
+                                            break;
+                                        }
+                                    }
+                                    if (is_friendly) {
+                                        friendly_dist[*i2]->insert(k);
+                                        W_assumption_frontier.insert(*i2);
+                                        friendly_dist_seen[*i2]->insert(k);
+                                        fixpoint_reached=false;
+                                    }
+                                }
                             }
                         }
                     }
@@ -346,24 +379,29 @@ public:
                     }
                     YY=XX;
                 }
-                /* update the winning region or check if fixpoint is reached */
-                fixpoint_reached=true;
-                for (auto i=YY.begin(); i!=YY.end(); ++i) {
-                    if (W.find(*i)==W.end()) {
-                        W.insert(*i);
-                        fixpoint_reached=false;
-                    }
+                if (fixpoint_reached) {
+                    break;
                 }
+                // /* update the winning region or check if fixpoint is reached */
+                // fixpoint_reached=true;
+                // for (auto i=YY.begin(); i!=YY.end(); ++i) {
+                //     if (W.find(*i)==W.end()) {
+                //         W.insert(*i);
+                //         fixpoint_reached=false;
+                //     }
+                // }
                 /* Set updates for the next round:
                  *  - Clear all the friendly disturbances
-                 *  - Mark all the states "avoid" which were in the assumption violation frontier and were declared unsafe */
+                 *  - Mark all the states "avoid" which were in the assumption violation frontier and were declared unsafe
+                 *  - Remove the losing states from the assumption frontier */
                 for (abs_type i=0; i<no_states; i++) {
                     if (W_assumption_frontier.find(i)!=W_assumption_frontier.end()) {
                         friendly_dist[i]->clear();
-                        if (YY.find(i)!=YY.end()) {
+                        if (YY.find(i)==YY.end()) {
                             monitor_avoid_states_.insert(i);
-                        } else {
                             W_assumption_frontier.erase(i);
+                        // } else {
+                        //     W_assumption_frontier.erase(i);
                         }
                     }
                 }
@@ -474,6 +512,8 @@ public:
                 *live_win[i]=*reach_win[i];
             }
         }
+        // /* experimental counter part */
+        // monitor_target_states_.insert(0);
         return live_win;
     }
     /*! compute the set of spoiling behaviors in the form of a safety automaton.
@@ -503,6 +543,9 @@ public:
             out_flag=2;
             return out_flag;
         }
+        // /* experimental: to avoid direct help from falsifying the assumption */
+        // monitor_target_states_.erase(0);
+        // /* experimental ends */
         /* solve the liveness game with maybe semantics */
         std::vector<unordered_set<abs_type>*> maybe_win = solve_liveness_game("maybe");
         /* debugging */
@@ -553,6 +596,9 @@ public:
             }
             bad_pairs.push_back(set);
         }
+        /* debug */
+        writeVecSet("Outputs/interim_bad_pairs.txt","INTERIM_BAD_PAIRS",bad_pairs,"w");
+        /* debug end */
         /* update the transition system by removing all the successors of the elements in bad_pairs */
         for (abs_type i=0; i<no_states; i++) {
             for (auto k=bad_pairs[i]->begin(); k!=bad_pairs[i]->end(); ++k) {
@@ -573,19 +619,58 @@ public:
                 monitor_target_states_.erase(*im);
             }
         }
+        // /* experimental: to avoid direct help from falsifying the assumption */
+        // monitor_target_states_.erase(0);
+        // /* solve the liveness game with maybe semantics */
+        // maybe_win = solve_liveness_game("maybe");
+        // /* remove those inputs from W which were asking for violation of assumption */
+        // for (abs_type i=0; i<no_states; i++) {
+        //     if (maybe_win[i]->size()==0) {
+        //         W.erase(i);
+        //     }
+        // }
+        // monitor_target_states_.insert(0);
+        // /* experimental ends here */
         /* initialize set of states for iteratively computing the LiveLockPairs */
         std::unordered_set<abs_type> T_cur;
         for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
             T_cur.insert(*i);
         }
+        // /* experimental */
+        // T_cur.erase(0);
         /* repeat until convergence*/
-        while (T_cur!=W) {
+        while (1) {
 //            /* save the current targets */
 //            T_old=T_cur;
+            /* if all the current target states are in the all reachable maybe winning states, then terminate the loop */
+            bool all_maybe_winning_covered=true;
+            for (auto i=W.begin(); i!=W.end(); ++i) {
+                // /* experimental */
+                // if (*i==0) {
+                //     continue;
+                // }
+                // /* experimental ends here */
+                if (T_cur.find(*i)==T_cur.end()) {
+                    all_maybe_winning_covered=false;
+                    break;
+                }
+            }
+            if (all_maybe_winning_covered) {
+                break;
+            }
             /* update the monitor target states */
             monitor_target_states_=T_cur;
+            // /* experimental */
+            // monitor_target_states_.insert(0);
+            // /* experimental ends */
             /* solve sure reachability game */
             sure_win=solve_reach_avoid_game("sure");
+            // /* experimental cleanup */
+            // monitor_target_states_.erase(0);
+            // /* experimental cleanup */
+            /* debug */
+            writeVecSet("Outputs/interim_sure_win.txt","INTERIM_SURE_WIN",sure_win,"w");
+            /* debug end */
             /* update the current target */
             for (abs_type i=0; i<no_states; i++) {
                 if (sure_win[i]->size()!=0) {
@@ -644,7 +729,31 @@ public:
                     }
                 }
             }
+            /* debug */
+            writeVecSet("Outputs/interim_bad_pairs.txt","INTERIM_BAD_PAIRS",bad_pairs,"w");
+            /* debug end */
         }
+        // /* experimental restoration */
+        // monitor_target_states_.insert(0);
+        // /* experimental ends here */
+        // /* experimental: for sure losing states (computed by inverting the maybe winning states with 0 not assigned as target), remove the bad pairs entries */
+        // for (abs_type i=0; i<no_states; i++) {
+        //     if (W.find(i)==W.end()) {
+        //         bad_pairs[i]->clear();
+        //     }
+        // }
+        // /* also remove the bad pairs which lead to the 0 state */
+        // for (abs_type j=0; j<no_control_inputs; j++) {
+        //     for (abs_type k=0; k<no_dist_inputs; k++) {
+        //         for (auto i=pre[addr_xuw(0,j,k)]->begin(); i!=pre[addr_xuw(0,j,k)]->end(); ++i) {
+        //             bad_pairs[*i]->erase(k);
+        //         }
+        //     }
+        // }
+        // /* experimental ends here */
+        /* debug */
+        writeVecSet("Outputs/interim_bad_pairs.txt","INTERIM_BAD_PAIRS",bad_pairs,"w");
+        /* debug end */
         /* find the reachable states using the updated post */
         R = compute_reachable_set();
 
@@ -728,8 +837,8 @@ public:
     /*! Find pairs of state-disturbance input (x,w1) s.t.:
      *      - x is in W1
      *      - there exists (u,w2) s.t. w1 != w2
-     *      - all posts of (x,u,w2) is in W2
-     *      - there exists post of (x,u,w1) which is not in W2.
+     *      - all posts of (x,u,w2) are in W2
+     *      - there exists a post of (x,u,w1) which is not in W2.
      *
      * \param[in] W1        the set W1
      * \param[in] W2        the set W2
