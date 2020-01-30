@@ -193,6 +193,15 @@ public:
             guarantee_updated.writeToFile("Outputs/full_guarantee.txt");
             guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
             guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
+            negotiation::SafetyAutomaton *test1=new negotiation::SafetyAutomaton(*guarantee_[0]);
+            test1->writeToFile("Outputs/test1.txt");
+            determinize(test1);
+            test1->writeToFile("Outputs/test1_det.txt");
+            negotiation::SafetyAutomaton *test2=new negotiation::SafetyAutomaton(*guarantee_[1]);
+            test2->post_[3]->erase(1);
+            test2->writeToFile("Outputs/test2.txt");
+            determinize(test2);
+            test2->writeToFile("Outputs/test2_det.txt");
              /* debug ends */
             bool flag2 = recursive_negotiation(k,k_act,1-c,0);
             if (flag2) {
@@ -237,12 +246,13 @@ public:
         spoilers_safety->trim();
         // spoilers_safety->determinize();
 
-        /* new: minimize the spoiler_safet automaton  */
+        /* new: minimize the spoiler_safety automaton  */
         negotiation::Spoilers safety(spoilers_safety);
         safety.boundedBisim();
-        // /* debugging */
-        // spoilers_safety->writeToFile("Outputs/interim_safe_det.txt");
-        // /* end of debugging */
+        /* debugging */
+        spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+        safety.spoilers_mini_->writeToFile("Outputs/interim_safe_det.txt");
+        /* end of debugging */
         // /* construct a monitor for the liveness game which has the same state space as the safety monitor, and the transitions are obtained by deleting the transitions in the safety monitor which are disallowed by the control strategy */
         // /* the allowed inputs are all the possible control inputs */
         // std::vector<std::unordered_set<abs_type>*> allowed_inputs;
@@ -302,7 +312,7 @@ public:
         negotiation::Spoilers liveness(spoilers_liveness);
         liveness.boundedBisim();
         /* debug */
-        spoilers_liveness->writeToFile("Outputs/interim_live_det.txt");
+        liveness.spoilers_mini_->writeToFile("Outputs/interim_live_det.txt");
         /* debug ends */
         /* the overall spoiling behavior is the union of spoiling behavior for the safety spec and the liveness spec, or the overall non-spoiling behavior is the intersection of non-spoilers for safety AND non-spoilers for liveness */
 //        SafetyAutomaton spoilers_overall(*spoilers_safety, *spoilers_liveness);
@@ -323,6 +333,114 @@ public:
             out_flag=1;
         }
         return out_flag;
+    }
+    /*! Determinize a safety automaton (using the universal accepting condition: the rejecting states are lumped into the one with index 0)
+     *      what's new: this algorithm is based on the bounded bisimulation in spoiler class.
+            - First a spoiler object is created by inverting all the arrows in the safety automaton.
+            - Then the intitial states are lumped into one initial state, and the indices of the initial state and the sink state 0 are flipped.
+            - After that, the bounded bisimulation algorithm is run until convergence, and
+            - in the end all the arrows and the intial state and the sink state are restored to their normal form to obtain the final deterministic automaton.*/
+    void determinize(SafetyAutomaton* A) {
+        /* first create a new safety automaton whose transitions are the inverted version of this safety automaton */
+        negotiation::SafetyAutomaton safety_altered;
+        /* the number of states of safety_altered is obtained by considering one initial state instead of many */
+        safety_altered.no_states_=A->no_states_-A->init_.size()+1;
+        /* number of inputs is the same */
+        safety_altered.no_inputs_=A->no_inputs_;
+        /* all the initial states are grouped together and mapped to 0, while the rejecting sink state is mapped to the smallest initial state index */
+        safety_altered.init_.insert(smallest_element<abs_type>(A->init_));
+        /* create the transition array */
+        std::unordered_set<abs_type>** post = new std::unordered_set<abs_type>*[safety_altered.no_states_*safety_altered.no_inputs_];
+        for (abs_type i=0; i<safety_altered.no_states_; i++) {
+            for (abs_type k=0; k<safety_altered.no_inputs_; k++) {
+                std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+                post[safety_altered.addr(i,k)]=set;
+            }
+        }
+        /* the transitions are inverted */
+        for (abs_type i=0; i<A->no_states_; i++) {
+            for (abs_type k=0; k<A->no_inputs_; k++) {
+                for (auto i2=A->post_[A->addr(i,k)]->begin(); i2!=A->post_[A->addr(i,k)]->end(); ++i2) {
+                    abs_type cur_state, next_state;
+                    if (i==0) {
+                        next_state=*safety_altered.init_.begin(); /* there is just one state in the new init_ */
+                    } else if (A->init_.find(i)!=A->init_.end()) {
+                        next_state=0;
+                    } else {
+                        next_state=i;
+                    }
+                    if (*i2==0) {
+                        cur_state=*safety_altered.init_.begin(); /* there is just one state in the new init_ */
+                    } else if (A->init_.find(*i2)!=A->init_.end()) {
+                        cur_state=0;
+                    } else {
+                        cur_state=*i2;
+                    }
+                    post[safety_altered.addr(cur_state,k)]->insert(next_state);
+                }
+            }
+        }
+        safety_altered.addPost(post);
+        /* debug */
+        safety_altered.writeToFile("Outputs/interim_safety_altered.txt");
+        /* debug end */
+        /* perform bisimulation (implemented in the spoiler class) */
+        Spoilers spoiler_dummy(&safety_altered);
+        spoiler_dummy.boundedBisim();
+        /* the new number of states is obtained by grouping together all the initial states of the minimized automaton into one state */
+        A->no_states_=spoiler_dummy.spoilers_mini_->no_states_-spoiler_dummy.spoilers_mini_->init_.size()+1;
+        /* the new initial state (singleton) is mapped to the smallest initial state index of the minimized spoiler automaton */
+        A->init_.clear();
+        A->init_.insert(smallest_element<abs_type>(spoiler_dummy.spoilers_mini_->init_));
+        /* invert the transitions and the initial and sink states in the minimized automaton again */
+        std::unordered_set<abs_type>** post_new = new std::unordered_set<abs_type>*[A->no_states_*A->no_inputs_];
+        /* first fill the post_new array */
+        for (abs_type i=0; i<A->no_states_; i++) {
+            for (abs_type k=0; k<A->no_inputs_; k++) {
+                std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+                post_new[A->addr(i,k)]=set;
+            }
+        }
+        /* invert the transitions */
+        for (abs_type i=0; i<spoiler_dummy.spoilers_mini_->no_states_; i++) {
+            for (abs_type k=0; k<spoiler_dummy.spoilers_mini_->no_inputs_; k++) {
+                for (auto i2=spoiler_dummy.spoilers_mini_->post_[spoiler_dummy.spoilers_mini_->addr(i,k)]->begin(); i2!=spoiler_dummy.spoilers_mini_->post_[spoiler_dummy.spoilers_mini_->addr(i,k)]->end(); ++i2) {
+                    abs_type cur_state, next_state;
+                    if (i==0) {
+                        next_state=*A->init_.begin(); /* there is just one state in the new init_ */
+                    } else if (spoiler_dummy.spoilers_mini_->init_.find(i)!=spoiler_dummy.spoilers_mini_->init_.end()) {
+                        next_state=0;
+                    } else {
+                        next_state=i;
+                    }
+                    if (*i2==0) {
+                        cur_state=*A->init_.begin(); /* there is just one state in the new init_ */
+                    } else if (spoiler_dummy.spoilers_mini_->init_.find(*i2)!=spoiler_dummy.spoilers_mini_->init_.end()) {
+                        cur_state=0;
+                    } else {
+                        cur_state=*i2;
+                    }
+                    post_new[A->addr(cur_state,k)]->insert(next_state);
+                }
+            }
+        }
+        A->resetPost();
+        A->addPost(post_new);
+
+        delete[] post;
+        delete[] post_new;
+    }
+private:
+    /* find the smallest element in a given set */
+    template <class T>
+    T smallest_element(const std::unordered_set<T>& set) {
+        T elem = *set.begin();
+        for (auto i=set.begin(); i!=set.end(); ++i) {
+            if (elem>*i) {
+                elem=*i;
+            }
+        }
+        return elem;
     }
 }; /* end of class definition */
 } /* end of namespace negotiation */

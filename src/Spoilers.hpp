@@ -115,7 +115,7 @@ public:
      * \param[in] r2        post abstract state index (group of concrete states)
      * \param[in] j          input index
      * \param[in] S1        subset of r1 which are in j-predecessor of r2
-     * \param[in] S2        subset of concrete states which are in j-predecessor of r2 and does not intersect with r1 */
+     * \param[in] S2        subset of r1 which are not in j-predecessor of r2 */
     void computeOverlappingPre(const abs_type& r1, const abs_type& r2, abs_type j, std::unordered_set<abs_type>& S1, std::unordered_set<abs_type>& S2) {
         S1.clear();
         S2.clear();

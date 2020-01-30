@@ -543,18 +543,21 @@ public:
             out_flag=2;
             return out_flag;
         }
-        // /* experimental: to avoid direct help from falsifying the assumption */
-        // monitor_target_states_.erase(0);
-        // /* experimental ends */
+        /* experimental: to avoid direct help from falsifying the assumption */
+        monitor_target_states_.erase(0);
+        /* experimental ends */
         /* solve the liveness game with maybe semantics */
-        std::vector<unordered_set<abs_type>*> maybe_win = solve_liveness_game("maybe");
+        std::vector<unordered_set<abs_type>*> maybe_win_without_assumption_violation = solve_liveness_game("maybe");
+        /* experimental: restoration */
+        monitor_target_states_.insert(0);
+        /* experimental ends */
         /* debugging */
-        writeVecSet("Outputs/maybe_live.txt","MAYBE_LIVE",maybe_win,"w");
+        writeVecSet("Outputs/maybe_live.txt","MAYBE_LIVE",maybe_win_without_assumption_violation,"w");
         /* end of debugging */
         /* if not all the initial states are maybe winning, then no negotiation is possible: return false */
         bool allInitMaybeWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
-            if (maybe_win[*i]->size()==0) {
+            if (maybe_win_without_assumption_violation[*i]->size()==0) {
                 allInitMaybeWinning=false;
                 break;
             }
@@ -568,7 +571,7 @@ public:
         /* find intersection of the reachable set with the maybe winning region */
         std::unordered_set<abs_type> W;
         for (auto i=R.begin(); i!=R.end(); ++i) {
-            if (maybe_win[*i]->size()!=0) {
+            if (maybe_win_without_assumption_violation[*i]->size()!=0) {
                 W.insert(*i);
             }
         }
@@ -587,7 +590,13 @@ public:
         /* a vector containing the bad inputs for each state index */
         std::vector<std::unordered_set<abs_type>*> bad_pairs;
         /* compute unsafe pairs as a vector of the same size as the number of states, where the element with index i points to the set of bad disturbance inputs for state i */
-        std::vector<std::unordered_set<abs_type>*> unsafe_pairs=find_bad_pairs(W,W);
+        /* experimental: it is okay to have successors going to state 0 while computing bad pairs */
+        std::unordered_set<abs_type> W_with_0=W;
+        W_with_0.insert(0);
+        std::vector<std::unordered_set<abs_type>*> unsafe_pairs=find_bad_pairs(W,W_with_0);
+        /* before experimental */
+        // std::vector<std::unordered_set<abs_type>*> unsafe_pairs=find_bad_pairs(W,W);
+        /* experimental ends here */
         /* update the bad pairs */
         for (abs_type i=0; i<no_states; i++) {
             std::unordered_set<abs_type>* set=new std::unordered_set<abs_type>;
@@ -604,18 +613,24 @@ public:
             for (auto k=bad_pairs[i]->begin(); k!=bad_pairs[i]->end(); ++k) {
                 for (abs_type j=0; j<no_control_inputs; j++) {
                     abs_type addr_post = addr_xuw(i,j,*k);
+                    for (auto i2=post[addr_post]->begin(); i2!=post[addr_post]->end(); ++i2) {
+                        pre[*i2,j,*k]->erase(i);
+                    }
                     post[addr_post]->clear();
                     no_post[addr_post]=0;
                 }
             }
         }
+        /* trim the unreachable transitions from the monitor */
+        trim_transitions();
 //        /* compute the reachable set of states with this updated transition system */
 //        R = compute_reachable_set();
         /* save the old target states, as target states will be updated */
         std::unordered_set<abs_type> monitor_target_states_old=monitor_target_states_;
         /* remove those targets which are not in the reachable part of maybe winning region */
         for (auto im=monitor_target_states_.begin(); im!=monitor_target_states_.end(); ++im) {
-            if (W.find(*im)==W.end()) {
+            if (W.find(*im)==W.end() &&
+                *im!=0) {
                 monitor_target_states_.erase(*im);
             }
         }
@@ -636,8 +651,15 @@ public:
         for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
             T_cur.insert(*i);
         }
-        // /* experimental */
+        // /* experimental: do not try to reach the assumption violation */
         // T_cur.erase(0);
+        /* experimental ends */
+        /* initialize live_lock_pairs */
+        std::vector<std::unordered_set<abs_type>*> live_lock_pairs;
+        for (abs_type i=0; i<no_states; i++) {
+            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+            live_lock_pairs.push_back(set);
+        }
         /* repeat until convergence*/
         while (1) {
 //            /* save the current targets */
@@ -665,12 +687,30 @@ public:
             // /* experimental ends */
             /* solve sure reachability game */
             sure_win=solve_reach_avoid_game("sure");
+            /* debug */
+            writeVecSet("Outputs/interim_sure_win.txt","INTERIM_SURE_WIN",sure_win,"w");
+            writeToFile("Outputs/monitor.txt");
+            /* debug end */
             // /* experimental cleanup */
             // monitor_target_states_.erase(0);
             // /* experimental cleanup */
-            /* debug */
-            writeVecSet("Outputs/interim_sure_win.txt","INTERIM_SURE_WIN",sure_win,"w");
-            /* debug end */
+            /* add back the deleted transitions for those livelock pairs for which the respective states are still not sure winning */
+            for (abs_type i=0; i<no_states; i++) {
+                if (live_lock_pairs[i]->size()!=0 &&
+                    sure_win[i]->size()==0) {
+                    for (abs_type j=0; j<no_control_inputs; j++) {
+                        for (auto k=live_lock_pairs[i]->begin(); k!=live_lock_pairs[i]->end(); ++k) {
+                            *post[addr_xuw(i,j,*k)]=*post_old[addr_xuw(i,j,*k)];
+                            no_post[addr_xuw(i,j,*k)]=no_post[addr_xuw(i,j,*k)];
+                            for (auto i2=post[addr_xuw(i,j,*k)]->begin(); i2!=post[addr_xuw(i,j,*k)]->end(); ++i2) {
+                                pre[addr_xuw(*i2,j,*k)]->insert(i);
+                            }
+                        }
+                    }
+                    /* also clear the live_lock_pairs entry */
+                    live_lock_pairs[i]->clear();
+                }
+            }
             /* update the current target */
             for (abs_type i=0; i<no_states; i++) {
                 if (sure_win[i]->size()!=0) {
@@ -689,8 +729,8 @@ public:
                     for (abs_type k=0; k<no_dist_inputs; k++) {
                         abs_type addr_post=addr_xuw(i,j,k);
                         for (auto i2=post[addr_post]->begin(); i2!=post[addr_post]->end(); ++i2) {
-                            /* if the current post is outside maybe winning region, delete all the posts for all the other disturbance inputs */
-                            if (W.find(*i2)==W.end()) {
+                            /* if the current post is outside maybe winning region or the sink state 0, delete all the posts for all the other disturbance inputs */
+                            if (W_with_0.find(*i2)==W_with_0.end()) {
                                 winning_input=false;
                                 break;
                             }
@@ -703,6 +743,9 @@ public:
                     if (!winning_input) {
                         for (abs_type k2=0; k2<no_dist_inputs; k2++) {
                             abs_type addr_post2=addr_xuw(i,j,k2);
+                            for (auto i2=post[addr_post2]->begin(); i2!=post[addr_post2]->end(); ++i2) {
+                                pre[addr_xuw(*i2,j,k2)]->erase(i);
+                            }
                             post[addr_post2]->clear();
                             no_post[addr_post2]=0;
                         }
@@ -717,21 +760,44 @@ public:
                     T_cur_cmp.insert(i);
                 }
             }
-            std::vector<std::unordered_set<abs_type>*> live_lock_pairs=find_bad_pairs(T_cur_cmp,T_cur);
-            /* update bad pairs and post (remove all the transitions caused due to elements in live_lock_pairs) */
+            /* experimental: it is okay for a successor state to go to 0 while computing live lock pairs */
+            std::unordered_set<abs_type> T_cur_with_0=T_cur;
+            T_cur_with_0.insert(0);
+            T_cur_cmp.erase(0);
+            /* update LiveLockPairs */
+            std::vector<std::unordered_set<abs_type>*> live_lock_pairs_new=find_bad_pairs(T_cur_cmp,T_cur_with_0);
+            /* before experimental */
+            // std::vector<std::unordered_set<abs_type>*> live_lock_pairs=find_bad_pairs(T_cur_cmp,T_cur);
+            /* experimental ends here */
+            /* update the live_lock_pairs with the newly founded ones */
+            for (abs_type i=0; i<no_states; i++) {
+                for (auto k=live_lock_pairs_new[i]->begin(); k!=live_lock_pairs_new[i]->end(); ++k) {
+                    live_lock_pairs[i]->insert(*k);
+                }
+            }
+            /* update post (remove all the transitions caused due to elements in live_lock_pairs) */
             for (abs_type i=0; i<no_states; i++) {
                 for (auto k=live_lock_pairs[i]->begin(); k!=live_lock_pairs[i]->end(); ++k) {
-                    bad_pairs[i]->insert(*k);
+                    // bad_pairs[i]->insert(*k);
                     for (abs_type j=0; j<no_control_inputs; j++) {
                         abs_type addr_post=addr_xuw(i,j,*k);
+                        for (auto i2=post[addr_post]->begin(); i2!=post[addr_post]->end(); ++i2) {
+                            pre[addr_xuw(*i2,j,*k)]->erase(i);
+                        }
                         post[addr_post]->clear();
                         no_post[addr_post]=0;
                     }
                 }
             }
             /* debug */
-            writeVecSet("Outputs/interim_bad_pairs.txt","INTERIM_BAD_PAIRS",bad_pairs,"w");
+            writeVecSet("Outputs/live_lock_pairs.txt","LIVE_LOCK_PAIRS",live_lock_pairs,"w");
             /* debug end */
+        }
+        /* add all the final livelock pairs to bad pairs */
+        for (abs_type i=0; i<no_states; i++) {
+            for (auto k=live_lock_pairs[i]->begin(); k!=live_lock_pairs[i]->end(); ++k) {
+                bad_pairs[i]->insert(*k);
+            }
         }
         // /* experimental restoration */
         // monitor_target_states_.insert(0);
@@ -817,8 +883,9 @@ public:
             }
         }
         spoilers->addPost(p);
-//        /* write the spoilers automaton to file */
-//        spoilers.writeToFile(filename);
+       /* debug */
+       spoilers->writeToFile("Outputs/interim_liveness_spoiler.txt");
+       /* debug end */
         /* restore post, no_post, monitor_target_states_*/
         monitor_target_states_=monitor_target_states_old;
         for (abs_type l=0; l<no_states*no_control_inputs*no_dist_inputs; l++) {
@@ -861,6 +928,7 @@ public:
                     abs_type addr_post = addr_xuw(i,j,k);
                     for (auto i2=post[addr_post]->begin(); i2!=post[addr_post]->end(); ++i2) {
                         /* if this post is outside W2, then this pair (i,k) could potentially be an unsafe pair */
+                        bool is_bad_pair=false;
                         if (W2.find(*i2)==W2.end()) {
                             for (abs_type k2=0; k2<no_dist_inputs; k2++) {
                                 if (k==k2) {
@@ -884,8 +952,14 @@ public:
                                 /* if k2 is friendly, then (i,k) is an unsafe pair */
                                 if (friendly_disturbance) {
                                     bad_pairs[i]->insert(k);
+                                    is_bad_pair=true;
+                                    break;
                                 }
                             }
+                        }
+                        /* the current (i,k) pair is already an unsafe pair: proceed with the next k */
+                        if (is_bad_pair) {
+                            break;
                         }
                     }
                 }

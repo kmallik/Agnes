@@ -362,6 +362,33 @@ public:
         /* the set seen is the set of reachable states */
         return seen;
     }
+    /*! Trim the transitions from the unreachable states (except for the special sink states 0 and 1) */
+    void trim_transitions() {
+        /* first compute the reachable set of states */
+        std::unordered_set<abs_type> reach_set = compute_reachable_set();
+        /* remove transitions for all the states which are not reachable */
+        for (abs_type i=2; i<no_states; i++) {
+            /* if i is in the reachable set, then ignore i */
+            if (reach_set.find(i)!=reach_set.end()) {
+                continue;
+            }
+            /* iterate over all the control inputs */
+            for (abs_type j=0; j<no_control_inputs; j++) {
+                /* iterate over all the disturbance inputs */
+                for (abs_type k=0; k<no_dist_inputs; k++) {
+                    /* iterate over all the posts to update their pre */
+                    for (auto i2=post[addr_xuw(i,j,k)]->begin(); i2!=post[addr_xuw(i,j,k)]->end(); ++i2) {
+                        /* update the pre of i2 */
+                        pre[addr_xuw(*i2,j,k)]->erase(i);
+                    }
+                    /* clear the post entries of state i */
+                    post[addr_xuw(i,j,k)]->clear();
+                    /* reset the number of posts */
+                    no_post[addr_xuw(i,j,k)]=0;
+                }
+            }
+        }
+    }
     /*! Index of state-control input-disturbance input pair.
      * \param[in] i           state index
      * \param[in] j           control input index
