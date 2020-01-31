@@ -50,13 +50,7 @@ public:
                 }
             }
         }
-        /* the reject_A state is also safe */
-        // /* experimental: "maybe" doesn't consider 0 as safe (nor unsafe), but "sure" does */
-        // if (!strcmp(str,"sure")) {
-        //     monitor_safe_states.insert(0);
-        // }
-
-        monitor_safe_states.insert(0);
+        monitor_safe_states.insert(0); /* the state 0 is always safe */
         std::queue<abs_type> Q; /* FIFO queue of bad states */
         std::unordered_set<abs_type> E; /* bad states */
         std::vector<std::unordered_set<abs_type>*> D; /* set of valid inputs indexed by the monitor state indices */
@@ -109,186 +103,33 @@ public:
                 }
             }
         }
-        if (!strcmp(str,"sure")) {
-            // /* the set of states from which the game is sure winning (initially only 0) */
-            // std::unordered_set<abs_type> W={0};
-            /* the set of states from which the game is sure winning unless the assumption is falsified (initially only 0) */
-            std::unordered_set<abs_type> W_assumption_frontier={0};
-            // /* flag for checking convergence */
-            // bool fixpoint_reached=false;
-            /* set of friendly disturbance inputs (which lead to assumption falsifying sure winning states) per state */
-            std::vector<std::unordered_set<abs_type>*> friendly_dist, friendly_dist_seen;
-            for (abs_type i=0; i<no_states; i++) {
-                std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
-                friendly_dist.push_back(set);
-                std::unordered_set<abs_type>* set2 = new std::unordered_set<abs_type>;
-                friendly_dist_seen.push_back(set2);
-            }
-            std::queue<abs_type> Q_old=Q; /* saved copy of FIFO queue of bad states */
-            std::unordered_set<abs_type> E_old=E; /* saved copy of bad states */
-            std::vector<std::unordered_set<abs_type>*> D_old; /* saved copy of set of valid inputs indexed by the monitor state indices */
-            for (abs_type i=0; i<no_states; i++) {
-                std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
-                D_old.push_back(set);
-                *D_old[i]=*D[i];
-            }
-            while (1) {
-                /* update the list of friendly disturbances */
-                std::unordered_set<abs_type> WW=W_assumption_frontier;
-                W_assumption_frontier.clear();
-                bool fixpoint_reached=true;
-                for (auto i=WW.begin(); i!=WW.end(); ++i) {
-                    // /* if the current state in the frontier is not in the winning region, then ignore */
-                    // if (W.find(*i)==W.end()) {
-                    //     continue;
-                    // }
-                    for (abs_type k=0; k<no_dist_inputs; k++) {
-    //                    /* check if the disturbance k surely leads to the already computed winning region W from state i */
-    //                    bool sure_winning_dist=true;
-                        for (abs_type j=0; j<no_control_inputs; j++) {
-                            std::unordered_set<abs_type> p = *pre[addr_xuw(*i,j,k)];
-                            for (auto i2=p.begin(); i2!=p.end(); ++i2) {
-                                if (friendly_dist_seen[*i2]->find(k)==friendly_dist_seen[*i2]->end()) {
-                                    /* if k leads to an unsafe state no matter what control input we choose, then k is not friendly */
-                                    bool is_friendly;
-                                    for (abs_type j2=0; j2<no_control_inputs; j2++) {
-                                        is_friendly=true;
-                                        for (auto q=E.begin(); q!=E.end(); ++q) {
-                                            if (post[addr_xuw(*i2,j2,k)]->find(*q) != post[addr_xuw(*i2,j2,k)]->end()) {
-                                                is_friendly=false;
-                                                break;
-                                            }
-                                        }
-                                        if (is_friendly) {
-                                            break;
-                                        }
-                                    }
-                                    if (is_friendly) {
-                                        friendly_dist[*i2]->insert(k);
-                                        W_assumption_frontier.insert(*i2);
-                                        friendly_dist_seen[*i2]->insert(k);
-                                        fixpoint_reached=false;
-                                    }
-                                }
-    //                            /* if the successor is not in W, then k is not friendly */
-    //                            if (W.find(*i2)==W.end()) {
-    //                                friendly_dist[i]->insert(k);
-    ////                                sure_winning_dist=false;
-    //                                break;
-    //                            }
-                            }
-                        }
-    //                    if (sure_winning_dist) {
-    //                        friendly_dist[i]->insert(k);
-    //                    }
-                    }
-                }
-                // /* load the saved value of Q, E and D */
-                // Q=Q_old;
-                // E=E_old;
-                for (abs_type i=0; i<no_states; i++) {
-                    *D[i]=*D_old[i];
-                }
-                /* iterate until Q is empty, i.e. when a fixed point is reached*/
-                while (Q.size()!=0) {
-                    abs_type x = Q.front();
-                    Q.pop();
-                    for (int j=0; j<no_control_inputs; j++) {
-                        for (int k=0; k<no_dist_inputs; k++) {
-                            abs_type x2 = addr_xuw(x,j,k);
-                            for (auto it=pre[x2]->begin(); it!=pre[x2]->end(); ++it) {
-                                /* the current disturbance input leads to sure winning from the pre state */
-        //                        std::unordered_set<abs_type> p = *post[addr_xuw(*it,j,k)];
-                                if (friendly_dist[*it]->find(k)==friendly_dist[*it]->end()) {
-                                    /* remove all the control inputs from the pre-states of x which lead to x */
-//                                            if (!strcmp(str,"sure")) {
-                                        /* for sure winning, remove the control input */
-                                    D[*it]->erase(j);
-//                                            } else {
-//                                                /* for maybe winning, remove the joint input */
-//                                                D[*it]->erase(addr_uw(j,k));
-//                                            }
-                                    if (D[*it]->size()==0 && !isMember<abs_type>(E,*it)) {
-                                        /* debug */
-                                        // std::cout << "state marked as bad = " << *it << "\n";
-                                        /* debug end */
-                                        Q.push(*it);
-                                        E.insert(*it);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                if (fixpoint_reached) {
-                    break;
-                }
-                // /* update the winning region or check if fixpoint is reached */
-                // fixpoint_reached=true;
-                // for (abs_type i=0; i<no_states; i++) {
-                //     if (D[i]->size()==0) {
-                //         continue;
-                //     // } else if (W.find(i)==W.end()) {
-                //     //     W.insert(i);
-                //     } else {
-                //         fixpoint_reached=false;
-                //         break;
-                //     }
-                // }
-                /* Set updates for the next round:
-                 *  - Q for the next round contains all the states declared unsafe which were in the assumption violation frontier
-                 *  - Clear all the friendly disturbances
-                 *  - Remove all the states from assumption violation frontiers which were declared unsafe */
-                 /* the original unsafe states (guarantee violation and monitor unsafe states) are always in Q */
-                 Q=Q_old;
-                for (abs_type i=0; i<no_states; i++) {
-                    if (W_assumption_frontier.find(i)!=W_assumption_frontier.end()) {
-                        friendly_dist[i]->clear();
-                        if (E.find(i)!=E.end()) {
-                            Q.push(i);
-                            W_assumption_frontier.erase(i);
-                        }
-                        //  else {
-                        //     // W_assumption_frontier.erase(i);
-                        // }
-                    }
-                }
-                Q_old=Q;
-            }
-        } else {
-            /* iterate until Q is empty, i.e. when a fixed point is reached*/
-            while (Q.size()!=0) {
-                abs_type x = Q.front();
-                Q.pop();
-                for (int j=0; j<no_control_inputs; j++) {
-                    for (int k=0; k<no_dist_inputs; k++) {
-                        abs_type x2 = addr_xuw(x,j,k);
-                        for (auto it=pre[x2]->begin(); it!=pre[x2]->end(); ++it) {
+        /* iterate until Q is empty, i.e. when a fixed point is reached*/
+        while (Q.size()!=0) {
+            abs_type x = Q.front();
+            Q.pop();
+            for (int j=0; j<no_control_inputs; j++) {
+                for (int k=0; k<no_dist_inputs; k++) {
+                    abs_type x2 = addr_xuw(x,j,k);
+                    for (auto it=pre[x2]->begin(); it!=pre[x2]->end(); ++it) {
+                        if (!strcmp(str,"sure")) {
+                            /* remove all the control inputs from the pre-states of x which lead to x */
+                            D[*it]->erase(j);
+                        } else {
                             /* remove all the joint inputs from the pre-states of x which lead to x */
                             D[*it]->erase(addr_uw(j,k));
-                            if (D[*it]->size()==0 && !isMember<abs_type>(E,*it)) {
-                                /* debug */
-                                // std::cout << "state marked as bad = " << *it << "\n";
-                                /* debug end */
-                                Q.push(*it);
-                                E.insert(*it);
-                            }
+                        }
+                        if (D[*it]->size()==0 && !isMember<abs_type>(E,*it)) {
+                            /* debug */
+                            // std::cout << "state marked as bad = " << *it << "\n";
+                            /* debug end */
+                            Q.push(*it);
+                            E.insert(*it);
                         }
                     }
                 }
             }
         }
 
-
-
-
-        // /* winning strategy in terms of the component state indices */
-        // std::vector<std::unordered_set<abs_type>*> winning_strategy;
-        // for (abs_type ic=0; ic<no_comp_states; ic++) {
-        //     std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
-        //     abs_type im = monitor_state_ind(ic,)
-        // }
-        //
         return D;
     }
     /*! Generate the spoiling behavior as a safety automaton and write to a file.

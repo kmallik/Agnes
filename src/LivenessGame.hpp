@@ -208,25 +208,25 @@ public:
     }
     /*! Solve Buchi game with additional safety objective.
      *
-     *  \param[in] str                                                  string specifying the sure/maybe winning condition
-     *  \param[out] live_win                                     optimal state-input pairs */
+     *  \param[in] str            string specifying the sure/maybe winning condition
+     *  \param[out] D             optimal state-input pairs */
     std::vector<unordered_set<abs_type>*> solve_liveness_game(const char* str="sure") {
         /* sanity check */
-        if (strcmp(str,"sure") && strcmp(str,"maybe")) {
+        if (!strcmp(str,"sure") && !strcmp(str,"maybe")) {
             try {
                 throw std::runtime_error("Liveness Game: invalid input.");
             } catch (std::exception& e) {
                 std::cout << e.what() << "\n";
             }
         }
-        // /* experimental: "maybe" doesn't consider 0 as target (nor unsafe), but "sure" does */
-        // if (!strcmp(str,"sure")) {
-        //     monitor_target_states_.insert(0);
-        // } else {
-        //     monitor_target_states_.erase(0);
-        // }
+//        initialize(component_target_states);
         /* a very high number used as value of losing states */
         abs_type losing = std::numeric_limits<abs_type>::max();
+        /* the outer nu variable */
+        std::unordered_set<abs_type> YY, YY_old;
+        for (abs_type i=0; i<no_states; i++) {
+            YY.insert(i);
+        }
         /* set of allowed inputs for the target states = non-blocking inputs (control input when str=sure, joint input when str=maybe) indexed by the state indices */
         std::vector<std::unordered_set<abs_type>*> D;
         for (abs_type i=0; i<no_states; i++) {
@@ -249,255 +249,94 @@ public:
                 }
             }
         }
-        /* the winning strategy (to be output) */
+        /* the inner mu variable */
+        std::unordered_set<abs_type> XX;
+        /* the strategy from the non-target states */
         std::vector<unordered_set<abs_type>*> reach_win;
-        if (!strcmp(str,"sure")) {
-            // /* the set of states from which the game is sure winning (initially only 0) */
-            // std::unordered_set<abs_type> W={0};
-            /* the set of states from which the game is sure winning unless the assumption is falsified (initially only 0) */
-            std::unordered_set<abs_type> W_assumption_frontier={0};
-            /* set of friendly disturbance inputs (which lead to assumption falsifying sure winning states) per state */
-            std::vector<std::unordered_set<abs_type>*> friendly_dist, friendly_dist_seen;
-            for (abs_type i=0; i<no_states; i++) {
-                std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
-                friendly_dist.push_back(set);
-                std::unordered_set<abs_type>* set2 = new std::unordered_set<abs_type>;
-                friendly_dist_seen.push_back(set2);
-            }
-            std::vector<std::unordered_set<abs_type>*> D_old; /* saved copy of set of valid inputs indexed by the monitor state indices */
-            for (abs_type i=0; i<no_states; i++) {
-                std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
-                D_old.push_back(set);
-                *D_old[i]=*D[i];
-            }
-            /* save the monitor avoid states for later restoration */
-            std::unordered_set<abs_type> monitor_avoid_states_old=monitor_avoid_states_;
-            while (1) {
-                /* update the list of friendly disturbances */
-                std::unordered_set<abs_type> WW=W_assumption_frontier;
-                W_assumption_frontier.clear();
-                /* flag for checking convergence */
-                bool fixpoint_reached=true;
-                for (auto i=WW.begin(); i!=WW.end(); ++i) {
-                    // /* if the current state in the frontier is not in the winning region, then ignore */
-                    // if (W.find(*i)==W.end()) {
-                    //     continue;
-                    // }
+        /* the target states from where it is possible to stay inside the winning region for at least one step */
+        std::unordered_set<abs_type> safe_targets;
+        /* iterate until a fix-point of YY is reached */
+        while (YY_old.size()!=YY.size()) {
+            /* save the current YY */
+            YY_old=YY;
+            /* the set of targets from which it is possible to stay in YY in the next step */
+            safe_targets.clear();
+            for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
+                /* only consider i from the intersection of YY and target */
+                if (YY.find(*i)==YY.end()) {
+                    continue;
+                }
+                for (abs_type j=0; j<no_control_inputs; j++) {
                     for (abs_type k=0; k<no_dist_inputs; k++) {
-                        /* check if the disturbance k could lead to (non-determinism is resolved existentially) the winning part of the assumption frontier from state i */
-                        for (abs_type j=0; j<no_control_inputs; j++) {
-                            std::unordered_set<abs_type> p = *pre[addr_xuw(*i,j,k)];
-                            for (auto i2=p.begin(); i2!=p.end(); ++i2) {
-                                if (friendly_dist_seen[*i2]->find(k)==friendly_dist_seen[*i2]->end()) {
-                                    /* if k leads to an unsafe state no matter what control input we choose, then k is not friendly */
-                                    bool is_friendly;
-                                    for (abs_type j2=0; j2<no_control_inputs; j2++) {
-                                        is_friendly=true;
-                                        for (auto q=monitor_avoid_states_.begin(); q!=monitor_avoid_states_.end(); ++q) {
-                                            if (post[addr_xuw(*i2,j2,k)]->find(*q) != post[addr_xuw(*i2,j2,k)]->end()) {
-                                                is_friendly=false;
-                                                break;
-                                            }
-                                        }
-                                        if (is_friendly) {
-                                            break;
-                                        }
-                                    }
-                                    if (is_friendly) {
-                                        friendly_dist[*i2]->insert(k);
-                                        W_assumption_frontier.insert(*i2);
-                                        friendly_dist_seen[*i2]->insert(k);
-                                        fixpoint_reached=false;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                /* load the saved value of D */
-                for (abs_type i=0; i<no_states; i++) {
-                    *D[i]=*D_old[i];
-                }
-                /* the outer nu variable */
-                std::unordered_set<abs_type> YY, YY_old;
-                for (abs_type i=0; i<no_states; i++) {
-                    YY.insert(i);
-                }
-                /* the inner mu variable */
-                std::unordered_set<abs_type> XX;
-                std::unordered_set<abs_type> safe_targets;
-                /* iterate until a fix-point of YY is reached */
-                while (YY_old.size()!=YY.size()) {
-                    /* save the current YY */
-                    YY_old=YY;
-                    /* the set of targets from which it is possible to stay in YY while avoiding the avoid states in the next step */
-                    safe_targets.clear();
-                    for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
-                        /* only consider i from the intersection of YY and target */
-                        if (YY.find(*i)==YY.end()) {
-                            continue;
-                        }
-                        for (abs_type j=0; j<no_control_inputs; j++) {
-                            for (abs_type k=0; k<no_dist_inputs; k++) {
-                                /* ignore the current disturbance if it is "friendly" */
-                                if (friendly_dist[*i]->find(k) != friendly_dist[*i]->end()) {
-                                    continue;
-                                }
-                                /* the address to look up in the post array */
-                                abs_type l=addr_xuw(*i,j,k);
-                                for (auto i2=post[l]->begin(); i2!=post[l]->end(); ++i2) {
-                                    /* if the successor i2 is not in YY or hits the avoid state, then the corresponding state-action pair is unsafe */
-                                    if (YY.find(*i2)==YY.end() ||
-                                        monitor_avoid_states_.find(*i2)!=monitor_avoid_states_.end()) {
-                                        D[*i]->erase(j);
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-                        /* the safe targets are those which have some action that makes sure that the successor is in YY */
-                        if (D[*i]->size()!=0) {
-                            safe_targets.insert(*i);
-                        }
-                    }
-                    /* create a new monitor with safe_targets as the true targets */
-                    negotiation::LivenessGame monitor2(*this);
-                    monitor2.monitor_target_states_=safe_targets;
-                    /* solve reach_avoid_game on monitor2 */
-                    reach_win.clear();
-                    reach_win=monitor2.solve_reach_avoid_game(str, friendly_dist);
-                    /* debug */
-                    monitor2.writeToFile("Outputs/monitor.txt");
-                    writeVecSet("Outputs/interim_reach_win.txt","REACH_WIN",reach_win,"w");
-                    /* debug end */
-                    /* create a vector of the winning states in the reach_avoid game */
-                    XX.clear();
-                    for (abs_type i=0; i<no_states; i++) {
-                        if (reach_win[i]->size()!=0) {
-                            XX.insert(i);
-                        }
-                    }
-                    YY=XX;
-                }
-                if (fixpoint_reached) {
-                    break;
-                }
-                // /* update the winning region or check if fixpoint is reached */
-                // fixpoint_reached=true;
-                // for (auto i=YY.begin(); i!=YY.end(); ++i) {
-                //     if (W.find(*i)==W.end()) {
-                //         W.insert(*i);
-                //         fixpoint_reached=false;
-                //     }
-                // }
-                /* Set updates for the next round:
-                 *  - Clear all the friendly disturbances
-                 *  - Mark all the states "avoid" which were in the assumption violation frontier and were declared unsafe
-                 *  - Remove the losing states from the assumption frontier */
-                for (abs_type i=0; i<no_states; i++) {
-                    if (W_assumption_frontier.find(i)!=W_assumption_frontier.end()) {
-                        friendly_dist[i]->clear();
-                        if (YY.find(i)==YY.end()) {
-                            monitor_avoid_states_.insert(i);
-                            W_assumption_frontier.erase(i);
-                        // } else {
-                        //     W_assumption_frontier.erase(i);
-                        }
-                    }
-                }
-            }
-            /* restore the original monitor avoid states */
-            monitor_avoid_states_=monitor_avoid_states_old;
-        } else {
-            /* compute maybe winning strategy */
-            /* the outer nu variable */
-            std::unordered_set<abs_type> YY, YY_old;
-            for (abs_type i=0; i<no_states; i++) {
-                YY.insert(i);
-            }
-            /* the inner mu variable */
-            std::unordered_set<abs_type> XX;
-            std::unordered_set<abs_type> safe_targets;
-//            // debug
-//            monitor_target_states_.erase(0);
-//            // debug end
-            /* iterate until a fix-point of YY is reached */
-            while (YY_old.size()!=YY.size()) {
-                /* save the current YY */
-                YY_old=YY;
-                /* the set of targets from which it is possible to stay in YY in the next step */
-                safe_targets.clear();
-                for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
-                    /* only consider i from the intersection of YY and target */
-                    if (YY.find(*i)==YY.end()) {
-                        continue;
-                    }
-                    for (abs_type j=0; j<no_control_inputs; j++) {
-                        for (abs_type k=0; k<no_dist_inputs; k++) {
-                            /* the address to look up in the post array */
-                            abs_type l=addr_xuw(*i,j,k);
-                            for (auto i2=post[l]->begin(); i2!=post[l]->end(); ++i2) {
-                                /* if the successor i2 is not in YY, then the corresponding state-action pair is unsafe */
-                                if (YY.find(*i2)==YY.end()) {
+                        /* the address to look up in the post array */
+                        abs_type l=addr_xuw(*i,j,k);
+                        for (auto i2=post[l]->begin(); i2!=post[l]->end(); ++i2) {
+                            /* if the successor i2 is not in YY, then the corresponding state-action pair is unsafe */
+                            if (YY.find(*i2)==YY.end()) {
+                                if (!strcmp(str,"sure")) {
+                                    D[*i]->erase(j);
+                                } else {
                                     D[*i]->erase(addr_uw(j,k));
-                                    continue;
                                 }
-                            }
-                        }
-                    }
-                    /* the safe targets are those which have some action that makes sure that the successor is in YY */
-                    if (D[*i]->size()!=0) {
-                        safe_targets.insert(*i);
-                    }
-                }
-                /* create a new monitor with safe_targets as the true targets */
-                negotiation::LivenessGame monitor2(*this);
-                monitor2.monitor_target_states_=safe_targets;
-                /* solve reach_avoid_game on monitor2 */
-                reach_win.clear();
-                reach_win=monitor2.solve_reach_avoid_game(str);
-                /* create a vector of the winning states in the reach_avoid game */
-                XX.clear();
-                for (abs_type i=0; i<no_states; i++) {
-                    if (reach_win[i]->size()!=0) {
-                        XX.insert(i);
-                    }
-                }
-                YY=XX;
-                /* the states from where cooperative winning is only possible by assumption violation need to be excluded from the maybe_win region */
-                /* first compute the backward reachable states of the target (excluding 0) */
-                std::queue<abs_type> Q;
-                std::unordered_set<abs_type> seen;
-                for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
-                    if (*i!=0) {
-                        Q.push(*i);
-                        seen.insert(*i);
-                    }
-                }
-                while (Q.size()!=0) {
-                    /* pop the first element */
-                    abs_type i2 = Q.front();
-                    Q.pop();
-                    /* add all the predecessors of i2 to the queue */
-                    for (abs_type j=0; j<no_control_inputs; j++) {
-                        for (abs_type k=0; k<no_dist_inputs; k++) {
-                            for (auto i=pre[addr_xuw(i2,j,k)]->begin(); i!=pre[addr_xuw(i2,j,k)]->end(); ++i) {
-                                if (seen.find(*i)==seen.end()) {
-                                    Q.push(*i);
-                                    seen.insert(*i);
-                                }
+                                continue;
                             }
                         }
                     }
                 }
-                /* now remove all the states (except the assumption violation state 0) in the maybe winning region which are not in the backward reachable set of the target */
-                for (abs_type i=1; i<no_states; i++) {
-                    if (seen.find(i)==seen.end()) {
-                        YY.erase(i);
-                        reach_win[i]->clear();
-                    }
+                /* the safe targets are those which have some action that makes sure that the successor is in YY */
+                if (D[*i]->size()!=0) {
+                    safe_targets.insert(*i);
                 }
             }
+            /* create a new monitor with safe_targets as the true targets */
+            negotiation::LivenessGame monitor2(*this);
+            monitor2.monitor_target_states_=safe_targets;
+            /* solve reach_avoid_game on monitor2 */
+            reach_win.clear();
+            reach_win=monitor2.solve_reach_avoid_game(str);
+            /* create a vector of the winning states in the reach_avoid game */
+            XX.clear();
+            for (abs_type i=0; i<no_states; i++) {
+                if (reach_win[i]->size()!=0) {
+                    XX.insert(i);
+                }
+            }
+            YY=XX;
+            /* IMPORTANT: THE FOLLOWING PART IS NEEDED IF THE STATE 0 HAS TO BE DECLARED AS TARGET DURING MAYBE_WIN */
+            // /* the states from where cooperative winning is only possible by assumption violation need to be excluded from the maybe_win region */
+            // /* first compute the backward reachable states of the target (excluding 0) */
+            // std::queue<abs_type> Q;
+            // std::unordered_set<abs_type> seen;
+            // for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
+            //     if (*i!=0) {
+            //         Q.push(*i);
+            //         seen.insert(*i);
+            //     }
+            // }
+            // while (Q.size()!=0) {
+            //     /* pop the first element */
+            //     abs_type i2 = Q.front();
+            //     Q.pop();
+            //     /* add all the predecessors of i2 to the queue */
+            //     for (abs_type j=0; j<no_control_inputs; j++) {
+            //         for (abs_type k=0; k<no_dist_inputs; k++) {
+            //             for (auto i=pre[addr_xuw(i2,j,k)]->begin(); i!=pre[addr_xuw(i2,j,k)]->end(); ++i) {
+            //                 if (seen.find(*i)==seen.end()) {
+            //                     Q.push(*i);
+            //                     seen.insert(*i);
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
+            // /* now remove all the states (except the assumption violation state 0) in the maybe winning region which are not in the backward reachable set of the target */
+            // for (abs_type i=1; i<no_states; i++) {
+            //     if (seen.find(i)==seen.end()) {
+            //         YY.erase(i);
+            //         reach_win[i]->clear();
+            //     }
+            // }
+            /* UPTO HERE IS NEEDED WHEN 0 IS A TARGET DURING MAYBE_WIN */
         }
         /* the liveness winning strategy is union of the winning strategy of reachability and the winning strategy of safety from the winning target states */
         std::vector<std::unordered_set<abs_type>*> live_win;
