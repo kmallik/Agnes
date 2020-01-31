@@ -283,6 +283,96 @@ public:
         delete[] post_new;
         delete[] old_to_new;
     }
+    /*! Determinize the safety automaton (using the universal accepting condition) */
+    void determinize() {
+        /* new deterministic post vector (will be converted to array later) */
+        std::vector<abs_type> post_det;
+        /* subsets of sets of states (explicit) already added, the index of set Q[i] in the deterministic automaton in i */
+        std::vector<std::unordered_set<abs_type>*> Q;
+        /* initially the deterministic automaton has just two states: the reject state (index 0) and the set of initial states (index 1) */
+        std::unordered_set<abs_type>* set_0 = new std::unordered_set<abs_type>;
+        set_0->insert(0);
+        Q.push_back(set_0);
+        std::unordered_set<abs_type>* set_init=new std::unordered_set<abs_type>;
+        *set_init = init_;
+        Q.push_back(set_init);
+        /* set of subsets of states to be explored for post computation (processed in FIFO fashion) */
+        std::queue<std::unordered_set<abs_type>*> E;
+        std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
+        s->insert(0);
+        E.push(s);
+        E.push(&init_);
+        /* the respective indices of those states */
+        std::queue<abs_type> indices;
+        indices.push(0); /* index of the reject state 0 */
+        indices.push(1); /* index of the set of initial states */
+        while (E.size()!=0) {
+            /* pop one set from E */
+            std::unordered_set<abs_type>* cur_state = E.front();
+            E.pop();
+            /* pop the respective state index */
+            abs_type cur_state_id=indices.front();
+            indices.pop();
+            for (abs_type j=0; j<no_inputs_; j++) {
+                /* initialize a set of post states of cur_state */
+                std::unordered_set<abs_type>* post = new std::unordered_set<abs_type>;
+                for (auto i=cur_state->begin(); i!=cur_state->end(); ++i) {
+                    std::unordered_set<abs_type>* post_set=post_[addr(*i,j)];
+                    /* flag to check if any successor goes to reject */
+                    bool unsafe=false;
+                    for (auto k=post_set->begin(); k!=post_set->end(); ++k) {
+                        if (*k==0) {
+                            post->clear();
+                            unsafe=true;
+                            break;
+                        } else {
+                            post->insert(*k);
+                        }
+                    }
+                    if (unsafe) {
+                        break;
+                    }
+                }
+                if (unsafe) {
+                    post_det.push_back(0);
+                } else {
+                    /* check if the set post has been seen before or not */
+                    bool seen_before=false;
+                    abs_type next_state_id;
+                    for (abs_type i=0; i<Q.size(); i++) {
+                        if (*post==*Q[i]) {
+                            seen_before=true;
+                            next_state_id=i;
+                            break;
+                        }
+                    }
+                    /* if this set of states has not been seen before, then create a new state index */
+                    if (!seen_before) {
+                        Q.push_back(post);
+                        next_state_id=Q.size()-1;
+                        E.push(post);
+                        indices.push(Q.size()-1);
+                    }
+                    /* add the transition */
+                    post_det.push_back(next_state_id);
+                }
+            }
+        }
+        /* now update the class member variables */
+        no_states_=Q.size();
+        init_.clear();
+        init_.insert(1);
+        /* convert post_det to an array */
+        post_det_arr = new std::unordered_set<abs_type>*[post_det.size()];
+        for (int i=0; i<post_det.size(); i++) {
+            std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
+            s->insert(post_det[i]);
+            post_det_arr[i]=s;
+        }
+        /* replace the current post with the deterministic version */
+        resetPost();
+        addPost(post_det_arr);
+    }
     // /*! Determinize the safety automaton (using the universal accepting condition: the rejecting states are lumped into the one with index 0) */
     // void determinize() {
     //     /* new deterministic post vector (will be converted to array later) */
