@@ -174,7 +174,13 @@ public:
              /* debug ends */
             negotiation::SafetyAutomaton guarantee_updated(*guarantee_[1-c],*spoiler.spoilers_mini_);
             guarantee_updated.trim();
-            // guarantee_updated.determinize();
+            /*debug */
+            guarantee_updated.writeToFile("Outputs/guarantee_before_det.txt");
+            /*debug ends */
+            guarantee_updated.determinize();
+            /*debug */
+            guarantee_updated.writeToFile("Outputs/guarantee_after_det.txt");
+            /*debug ends */
 
             /* new: minimize the guarantee automaton before saving */
             negotiation::Spoilers guarantee_final(&guarantee_updated);
@@ -193,15 +199,6 @@ public:
             guarantee_updated.writeToFile("Outputs/full_guarantee.txt");
             guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
             guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
-            negotiation::SafetyAutomaton *test1=new negotiation::SafetyAutomaton(*guarantee_[0]);
-            test1->writeToFile("Outputs/test1.txt");
-            determinize(test1);
-            test1->writeToFile("Outputs/test1_det.txt");
-            negotiation::SafetyAutomaton *test2=new negotiation::SafetyAutomaton(*guarantee_[1]);
-            test2->post_[3]->erase(1);
-            test2->writeToFile("Outputs/test2.txt");
-            determinize(test2);
-            test2->writeToFile("Outputs/test2_det.txt");
              /* debug ends */
             bool flag2 = recursive_negotiation(k,k_act,1-c,0);
             if (flag2) {
@@ -334,13 +331,13 @@ public:
         }
         return out_flag;
     }
-    /*! Determinize a safety automaton (using the universal accepting condition: the rejecting states are lumped into the one with index 0)
-     *      what's new: this algorithm is based on the bounded bisimulation in spoiler class.
+    /* Perform the bisimulation algorithm implemented for spoiler minimization in a forward direction.
+     *      This algorithm is based on the bounded bisimulation in spoiler class.
             - First a spoiler object is created by inverting all the arrows in the safety automaton.
             - Then the intitial states are lumped into one initial state, and the indices of the initial state and the sink state 0 are flipped.
             - After that, the bounded bisimulation algorithm is run until convergence, and
             - in the end all the arrows and the intial state and the sink state are restored to their normal form to obtain the final deterministic automaton.*/
-    void determinize(SafetyAutomaton* A) {
+    void reverse_bisimulation(SafetyAutomaton* A) {
         /* first create a new safety automaton whose transitions are the inverted version of this safety automaton */
         negotiation::SafetyAutomaton safety_altered;
         /* the number of states of safety_altered is obtained by considering one initial state instead of many */

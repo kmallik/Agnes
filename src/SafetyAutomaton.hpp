@@ -316,11 +316,12 @@ public:
             for (abs_type j=0; j<no_inputs_; j++) {
                 /* initialize a set of post states of cur_state */
                 std::unordered_set<abs_type>* post = new std::unordered_set<abs_type>;
+                /* flag to check if any successor goes to reject */
+                bool unsafe=false;
                 for (auto i=cur_state->begin(); i!=cur_state->end(); ++i) {
                     std::unordered_set<abs_type>* post_set=post_[addr(*i,j)];
-                    /* flag to check if any successor goes to reject */
-                    bool unsafe=false;
                     for (auto k=post_set->begin(); k!=post_set->end(); ++k) {
+                        /* if the successor is bad, then all the other successors are bad */
                         if (*k==0) {
                             post->clear();
                             unsafe=true;
@@ -363,7 +364,7 @@ public:
         init_.clear();
         init_.insert(1);
         /* convert post_det to an array */
-        post_det_arr = new std::unordered_set<abs_type>*[post_det.size()];
+        std::unordered_set<abs_type>** post_det_arr = new std::unordered_set<abs_type>*[post_det.size()];
         for (int i=0; i<post_det.size(); i++) {
             std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
             s->insert(post_det[i]);
@@ -372,6 +373,8 @@ public:
         /* replace the current post with the deterministic version */
         resetPost();
         addPost(post_det_arr);
+
+        delete[] post_det_arr;
     }
     // /*! Determinize the safety automaton (using the universal accepting condition: the rejecting states are lumped into the one with index 0) */
     // void determinize() {
