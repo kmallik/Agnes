@@ -15,12 +15,12 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define pr1_deadline_ 15
- #define pr2_deadline_ 15
- #define pr1_max_period_ 6
+ #define pr1_deadline_ 22
+ #define pr2_deadline_ 22
+ #define pr1_max_period_ 3
  #define pr2_max_period_ 6
- #define pr1_data_size_ 1
- #define pr2_data_size_ 1
+ #define pr1_data_size_ 4
+ #define pr2_data_size_ 3
 
 using namespace std;
 using namespace negotiation;
@@ -67,7 +67,7 @@ int main() {
     for (int pid=0; pid<2; pid++) {
         /* ******** create the processes ******** */
         /* There are states related to the writing process each having four components:
-         *   1: the state of one write operation ("idle" (0), "write" (1), "conflict check" (2), "conflict" (3), or "success" (4))
+         *   1: the state of one write operation ("idle" (0), "write" (1), "conflict" (2), or "success" (3))
          *   2: the number of packets remaining to be written (1 to data size)
          *   3: the time remaining in the global timer (deadline to 1)
          *   4: the time remaining until the next packet (max period to 1).
@@ -75,7 +75,7 @@ int main() {
          *   1: overall time-out (bad) -> state id 0
          *   2: period time-out (bad) -> state id 1
          *   3: task completed (good) -> state id 2 */
-        abs_type no_states = 5*ds[pid]*dl[pid]*mp[pid] + 3;
+        abs_type no_states = 4*ds[pid]*dl[pid]*mp[pid] + 3;
         /* the id of the writing related states are determined using the following lambda expression */
         auto state_id = [&](abs_type i, abs_type j, abs_type k, abs_type l) -> abs_type {
             if (k==0) {
@@ -119,7 +119,7 @@ int main() {
         state_to_output[0]=1;
         state_to_output[1]=1;
         state_to_output[2]=1;
-        for (int i=0; i<=4; i++) {
+        for (int i=0; i<=3; i++) {
             for (int j=1; j<=ds[pid]; j++) {
                 for (int k=1; k<=dl[pid]; k++) {
                     for (int l=1; l<=mp[pid]; l++) {
@@ -134,9 +134,6 @@ int main() {
                                 state_to_output[state_id(i,j,k,l)]=1;
                                 break;
                             case 3:
-                                state_to_output[state_id(i,j,k,l)]=1;
-                                break;
-                            case 4:
                                 state_to_output[state_id(i,j,k,l)]=1;
                                 break;
                         }
@@ -154,7 +151,7 @@ int main() {
         }
         /* the other states */
         int ind=3*no_control_inputs*no_dist_inputs;
-        for (int i=0; i<=4; i++) {
+        for (int i=0; i<=3; i++) {
             for (int j=1; j<=ds[pid]; j++) {
                 for (int k=1; k<=dl[pid]; k++) {
                     for (int l=1; l<=mp[pid]; l++) {
@@ -201,19 +198,15 @@ int main() {
                     /* state "write" */
                     x = state_id(1,j,k,l);
                     post[post_addr(x,0,0)]->push_back(state_id(2,j,k-1,l_updated));
-                    post[post_addr(x,0,1)]->push_back(state_id(2,j,k-1,l_updated));
-                    /* state "conflict check" */
-                    x = state_id(2,j,k,l);
-                    post[post_addr(x,0,0)]->push_back(state_id(3,j,k-1,l_updated));
-                    post[post_addr(x,0,1)]->push_back(state_id(4,j,k-1,l_updated));
+                    post[post_addr(x,0,1)]->push_back(state_id(3,j,k-1,l_updated));
                     /* state "conflict" */
-                    x = state_id(3,j,k,l);
+                    x = state_id(2,j,k,l);
                     post[post_addr(x,0,0)]->push_back(state_id(1,j,k-1,l_updated));
                     post[post_addr(x,0,1)]->push_back(state_id(1,j,k-1,l_updated));
                     post[post_addr(x,1,0)]->push_back(state_id(0,j,k-1,l_updated));
                     post[post_addr(x,1,1)]->push_back(state_id(0,j,k-1,l_updated));
                     /* state "success" */
-                    x = state_id(4,j,k,l);
+                    x = state_id(3,j,k,l);
                     post[post_addr(x,0,0)]->push_back(state_id(1,j-1,k-1,mp[pid]-1));
                     post[post_addr(x,0,1)]->push_back(state_id(1,j-1,k-1,mp[pid]-1));
                     post[post_addr(x,1,0)]->push_back(state_id(0,j-1,k-1,mp[pid]-1));

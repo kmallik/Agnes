@@ -220,6 +220,10 @@ public:
          /* debug */
          monitor.writeToFile("Outputs/monitor.txt");
          /* debug end */
+         monitor.trim();
+         /* debug */
+         monitor.writeToFile("Outputs/monitor_after_trim.txt");
+         /* debug end */
         //  /* experimental: to avoid direct help from falsifying the assumption */
         // safe_states_[c]->erase(0);
         //  /* experimental ends */
@@ -282,7 +286,15 @@ public:
                 allowed_joint_inputs.push_back(s);
             }
         }
-        negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], sure_safe, allowed_joint_inputs);
+        negotiation::LivenessGame monitor_live(monitor, *target_states_[c], sure_safe, allowed_joint_inputs);
+        // negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], sure_safe, allowed_joint_inputs);
+        /* debug */
+        monitor.writeToFile("Outputs/monitor.txt");
+        /* debug end */
+        monitor.trim();
+        /* debug */
+        monitor.writeToFile("Outputs/monitor_after_trim.txt");
+        /* debug end */
         // /* here the assumption is that the state space of monitor_safe and of monitor_live are the same (because allowed_inputs uses the same state space) */
         // // negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], allowed_inputs);
         // /* new: the assumption is updated with the spoilers from the safety part */

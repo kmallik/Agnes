@@ -46,12 +46,13 @@ public:
         /* target states */
         /* the assumption violation is always in target */
         monitor_target_states_.insert(0);
-        /* derive the other target states from the component, assumption, and guarantee state indices */
-        for (auto it=component_target_states.begin(); it!=component_target_states.end(); ++it) {
-            for (abs_type j=1; j<no_assume_states; j++) {
-                for (abs_type k=1; k<no_guarantee_states; k++) {
-                    monitor_target_states_.insert(monitor_state_ind(*it,j,k,no_assume_states,no_guarantee_states));
-                }
+        /* derive the other target states from the component state indices */
+        for (abs_type im=0; im<no_states; im++) {
+            /* the corresponding component state id */
+            abs_type ic=monitor_to_component_state_id[im];
+            /* if this component state is in target, then the corresponding monitor state is also in the target */
+            if (component_target_states.find(ic)!=component_target_states.end()) {
+                monitor_target_states_.insert(im);
             }
         }
         /* avoid state: the guarantee violation */
@@ -72,6 +73,60 @@ public:
         //     }
         //     allowed_inputs_.push_back(s);
         // }
+    }
+    /*! constructor
+     *
+     * \param[in] monitor_other             another monitor
+     * \param[in] component_target_states   set of component target states
+     * \param[in] allowed_control_inputs    vector of allowed control inputs indexed using the monitor state indices
+     * \param[in] allowed_joint_inputs      vector of allowed joint action inputs indexed using the monitor state indices
+
+     * NOTE: allowed_joint_inputs[i] has any effect only when allowed_control_inputs[i] is empty. */
+    LivenessGame(const Monitor& monitor_other,
+                const std::unordered_set<abs_type> component_target_states,
+                std::vector<std::unordered_set<abs_type>*> allowed_control_inputs,
+                std::vector<std::unordered_set<abs_type>*> allowed_joint_inputs) : Monitor(monitor_other) {
+
+        /* sanity check */
+        if (allowed_control_inputs.size()!=no_states
+            || allowed_joint_inputs.size()!=no_states) {
+            throw std::runtime_error("LivenessGame(constructor): the size of allowed input vectors do not match with the number of monitor states.\n");
+        }
+        /* restrict the transitions according to the allowed control and joint inputs */
+        for (abs_type im=0; im<no_states; im++) {
+            for (abs_type j=0; j<no_control_inputs; j++) {
+                bool bad_control_input=false;
+                if ((allowed_control_inputs[im]->size()!=0) &&
+                    (allowed_control_inputs[im]->find(j)==allowed_control_inputs[im]->end())) {
+                    bad_control_input=true;
+                }
+                for (abs_type k=0; k<no_dist_inputs; k++) {
+                    if ((bad_control_input) ||
+                        (allowed_joint_inputs[im]->find(addr_uw(j,k))==allowed_joint_inputs[im]->end())) {
+                        abs_type addr_post=addr_xuw(im,j,k);
+                        for (auto im2=post[addr_post]->begin(); im2!=post[addr_post]->end(); ++im2) {
+                            pre[addr_xuw(*im2,j,k)]->erase(im);
+                        }
+                        post[addr_post]->clear();
+                        no_post[addr_post]=0;
+                    }
+                }
+            }
+        }
+        /* target states */
+        /* the assumption violation is always in target */
+        monitor_target_states_.insert(0);
+        /* derive the other target states from the component state indices */
+        for (abs_type im=0; im<no_states; im++) {
+            /* the corresponding component state id */
+            abs_type ic=monitor_to_component_state_id[im];
+            /* if this component state is in target, then the corresponding monitor state is also in the target */
+            if (component_target_states.find(ic)!=component_target_states.end()) {
+                monitor_target_states_.insert(im);
+            }
+        }
+        /* avoid state: the guarantee violation */
+        monitor_avoid_states_.insert(1);
     }
     /*! Solve reach-avoid game, without any assumption on the disturbance inputs.
      \param[in] str                                                  string specifying the sure/maybe winning condition

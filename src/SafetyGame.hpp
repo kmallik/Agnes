@@ -43,11 +43,12 @@ public:
         }
         /* safe states */
         std::unordered_set<abs_type> monitor_safe_states;
-        for (auto it=component_safe_states.begin(); it!=component_safe_states.end(); ++it) {
-            for (abs_type j=1; j<no_assume_states; j++) {
-                for (abs_type k=1; k<no_guarantee_states; k++) {
-                    monitor_safe_states.insert(monitor_state_ind(*it,j,k,no_assume_states,no_guarantee_states));
-                }
+        for (abs_type im=0; im<no_states; im++) {
+            /* the corresponding component state id */
+            abs_type ic=monitor_to_component_state_id[im];
+            /* if this component state is safe, then the corresponding monitor state is also safe */
+            if (component_safe_states.find(ic)!=component_safe_states.end()) {
+                monitor_safe_states.insert(im);
             }
         }
         monitor_safe_states.insert(0); /* the state 0 is always safe */
