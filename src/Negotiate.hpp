@@ -146,18 +146,18 @@ public:
         // /* end of debugging */
         negotiation::SafetyAutomaton* s = new negotiation::SafetyAutomaton();
         int flag = compute_spoilers_overall(c,s);
-        /* debug */
-       s->writeToFile("Outputs/spoiler.txt");
-        /* debug ends */
+       //  /* debug */
+       // s->writeToFile("Outputs/spoiler.txt");
+       //  /* debug ends */
         if (flag==0) {
             /* when the game is sure losing for component c, the negotiation fails */
             std::cout << "\tThe game is sure losing for component " << c << "." << '\n';
             return false;
-        } else if (done==2) {
+        } else if (done==1 && flag==2) {
             /* when both the components have sure winning strategies with the current set of contracts, the negotiation successfully terminates */
             std::cout << "\tThe game is sure winning for both of the components. The negoitaiotn succeeded. Terminating the process." << '\n';
             return true;
-        } else if (flag==2) {
+        } else if (done==0 && flag==2) {
             /* when the component c---but not (1-c)---has a sure winning strategy with the present contract, it's component (1-c)'s turn to compute the spoilers */
             std::cout << "\tThe game is sure winning for component " << c << "." << '\n';
             return recursive_negotiation(k,k_act,1-c,done+1);
@@ -169,18 +169,18 @@ public:
             if (k_act[c]==-1) {
                 k_act[c]=spoiler.k_;
             }
-             /* debug */
-             spoiler.spoilers_mini_->writeToFile("Outputs/spoiler_mini.txt");
-             /* debug ends */
+             // /* debug */
+             // spoiler.spoilers_mini_->writeToFile("Outputs/spoiler_mini.txt");
+             // /* debug ends */
             negotiation::SafetyAutomaton guarantee_updated(*guarantee_[1-c],*spoiler.spoilers_mini_);
             guarantee_updated.trim();
-            /*debug */
-            guarantee_updated.writeToFile("Outputs/guarantee_before_det.txt");
-            /*debug ends */
+            // /*debug */
+            // guarantee_updated.writeToFile("Outputs/guarantee_before_det.txt");
+            // /*debug ends */
             guarantee_updated.determinize();
-            /*debug */
-            guarantee_updated.writeToFile("Outputs/guarantee_after_det.txt");
-            /*debug ends */
+            // /*debug */
+            // guarantee_updated.writeToFile("Outputs/guarantee_after_det.txt");
+            // /*debug ends */
 
             /* new: minimize the guarantee automaton before saving */
             negotiation::Spoilers guarantee_final(&guarantee_updated);
@@ -217,13 +217,13 @@ public:
         int out_flag;
         /* find the spoilers for the safety part */
         negotiation::SafetyGame monitor(*components_[c],*guarantee_[1-c],*guarantee_[c]);
-         /* debug */
-         monitor.writeToFile("Outputs/monitor.txt");
-         /* debug end */
-         monitor.trim();
-         /* debug */
-         monitor.writeToFile("Outputs/monitor_after_trim.txt");
-         /* debug end */
+         // /* debug */
+         // monitor.writeToFile("Outputs/monitor.txt");
+         // /* debug end */
+         // monitor.trim();
+         // /* debug */
+         // monitor.writeToFile("Outputs/monitor_after_trim.txt");
+         // /* debug end */
         //  /* experimental: to avoid direct help from falsifying the assumption */
         // safe_states_[c]->erase(0);
         //  /* experimental ends */
@@ -239,21 +239,21 @@ public:
             out_flag=0;
             return out_flag;
         }
-        /* debugging */
-        // spoilers_safety->writeToFile("Outputs/interim_safe.txt");
-        writeVecSet("Outputs/sure_safe.txt","SURE_SAFE",sure_safe,"w");
-        writeVecSet("Outputs/maybe_safe.txt","MAYBE_SAFE",maybe_safe,"w");
-        /* end of debugging */
+        // /* debugging */
+        // // spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+        // writeVecSet("Outputs/sure_safe.txt","SURE_SAFE",sure_safe,"w");
+        // writeVecSet("Outputs/maybe_safe.txt","MAYBE_SAFE",maybe_safe,"w");
+        // /* end of debugging */
         spoilers_safety->trim();
         // spoilers_safety->determinize();
 
         /* new: minimize the spoiler_safety automaton  */
         negotiation::Spoilers safety(spoilers_safety);
         safety.boundedBisim();
-        /* debugging */
-        spoilers_safety->writeToFile("Outputs/interim_safe.txt");
-        safety.spoilers_mini_->writeToFile("Outputs/interim_safe_det.txt");
-        /* end of debugging */
+        // /* debugging */
+        // spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+        // safety.spoilers_mini_->writeToFile("Outputs/interim_safe_det.txt");
+        // /* end of debugging */
         // /* construct a monitor for the liveness game which has the same state space as the safety monitor, and the transitions are obtained by deleting the transitions in the safety monitor which are disallowed by the control strategy */
         // /* the allowed inputs are all the possible control inputs */
         // std::vector<std::unordered_set<abs_type>*> allowed_inputs;
@@ -288,13 +288,13 @@ public:
         }
         negotiation::LivenessGame monitor_live(monitor, *target_states_[c], sure_safe, allowed_joint_inputs);
         // negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], sure_safe, allowed_joint_inputs);
-        /* debug */
-        monitor.writeToFile("Outputs/monitor.txt");
-        /* debug end */
-        monitor.trim();
-        /* debug */
-        monitor.writeToFile("Outputs/monitor_after_trim.txt");
-        /* debug end */
+        // /* debug */
+        // monitor.writeToFile("Outputs/monitor.txt");
+        // /* debug end */
+        // monitor_live.trim();
+        // /* debug */
+        // monitor.writeToFile("Outputs/monitor_after_trim.txt");
+        // /* debug end */
         // /* here the assumption is that the state space of monitor_safe and of monitor_live are the same (because allowed_inputs uses the same state space) */
         // // negotiation::LivenessGame monitor_live(*components_[c], *guarantee_[1-c], *guarantee_[c], *target_states_[c], allowed_inputs);
         // /* new: the assumption is updated with the spoilers from the safety part */
@@ -311,18 +311,18 @@ public:
             out_flag=0;
             return out_flag;
         }
-        /* debug */
-        spoilers_liveness->writeToFile("Outputs/interim_live.txt");
-       spoilers_safety->writeToFile("Outputs/interim_safe.txt");
-        /* debug ends */
+       //  /* debug */
+       //  spoilers_liveness->writeToFile("Outputs/interim_live.txt");
+       // spoilers_safety->writeToFile("Outputs/interim_safe.txt");
+       //  /* debug ends */
         spoilers_liveness->trim();
         // spoilers_liveness->determinize();
         /* new: minimize the spoiler_safet automaton  */
         negotiation::Spoilers liveness(spoilers_liveness);
         liveness.boundedBisim();
-        /* debug */
-        liveness.spoilers_mini_->writeToFile("Outputs/interim_live_det.txt");
-        /* debug ends */
+        // /* debug */
+        // liveness.spoilers_mini_->writeToFile("Outputs/interim_live_det.txt");
+        // /* debug ends */
         /* the overall spoiling behavior is the union of spoiling behavior for the safety spec and the liveness spec, or the overall non-spoiling behavior is the intersection of non-spoilers for safety AND non-spoilers for liveness */
 //        SafetyAutomaton spoilers_overall(*spoilers_safety, *spoilers_liveness);
         SafetyAutomaton spoilers_overall(*safety.spoilers_mini_, *liveness.spoilers_mini_);
@@ -390,9 +390,9 @@ public:
             }
         }
         safety_altered.addPost(post);
-        /* debug */
-        safety_altered.writeToFile("Outputs/interim_safety_altered.txt");
-        /* debug end */
+        // /* debug */
+        // safety_altered.writeToFile("Outputs/interim_safety_altered.txt");
+        // /* debug end */
         /* perform bisimulation (implemented in the spoiler class) */
         Spoilers spoiler_dummy(&safety_altered);
         spoiler_dummy.boundedBisim();

@@ -15,9 +15,9 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define plant_process_cycles_ 2
- #define plant_hibernate_cycle_ 2
- #define feeder_max_wait_cycles_ 8
+ #define plant_process_cycles_ 1
+ #define plant_hibernate_cycle_ 0
+ #define feeder_max_wait_cycles_ 15
 
 using namespace std;
 using namespace negotiation;
@@ -26,6 +26,10 @@ using namespace negotiation;
 /* main computation */
 /*********************************************************/
 int main() {
+    /* sanity check */
+    if (plant_process_cycles_<1) {
+        throw std::invalid_argument("The plant process cycle should be at least 1.\n");
+    }
     /* make a folder for the given parameters */
     std::string Str_folder = "";
     Str_folder += "../factory_pp";
@@ -171,6 +175,15 @@ int main() {
     /* *********************************** */
     /* generate the plant model */
     /* *********************************** */
+    /* the difference between plant hibernate cycle=1 and =0 is that the set of target states is empty in the later case */
+    abs_type plant_effective_hibernate_cycle_;
+    if (plant_hibernate_cycle_<0) {
+        throw std::invalid_argument("Invalid argument for the plant hibernate cycle.\n");
+    } else if (plant_hibernate_cycle_==0) {
+        plant_effective_hibernate_cycle_=1;
+    } else {
+        plant_effective_hibernate_cycle_=plant_hibernate_cycle_;
+    }
     /* the number of states constitutes of 4 fixed states:
      * 0: "idle, empty"
      * 1: "idle, non empty"
@@ -181,23 +194,14 @@ int main() {
      * even numbers between 1 and 2*plant_process_cycles_+1: "busy, empty"
      * odd numbers between 2 and 2*plant_process_cycles_+2: "busy, non empty"
      *
-     * the variable states (counting the number of cycles the plant has spent hibernating, if plant_hibernate_cycle_>2):
+     * the variable states (counting the number of cycles the plant has spent hibernating, if plant_effective_hibernate_cycle_>=2):
      * (2*plant_process_cycles_+2) to
-        ((2*plant_process_cycles_+2) + (plant_hibernate_cycle_-2): "idle, empty"
-     * ((2*plant_process_cycles_+2) + (plant_hibernate_cycle_-2) + 1) to
-        ((2*plant_process_cycles_+2) + (plant_hibernate_cycle_-2) + 1 + (plant_hibernate_cycle_-3)): "idle, non empty"
+        ((2*plant_process_cycles_+2) + (plant_effective_hibernate_cycle_-2): "idle, empty"
+     * ((2*plant_process_cycles_+2) + (plant_effective_hibernate_cycle_-2) + 1) to
+        ((2*plant_process_cycles_+2) + (plant_effective_hibernate_cycle_-2) + 1 + (plant_effective_hibernate_cycle_-2)): "idle, non empty"
      */
     abs_type no_states_plant;
-    if (plant_hibernate_cycle_>2) {
-        no_states_plant= 4
-                                +2*(plant_process_cycles_-1)
-                                +(plant_hibernate_cycle_-1)
-                                +(plant_hibernate_cycle_-2);
-    } else {
-        no_states_plant= 4
-                                +2*(plant_process_cycles_-1)
-                                +(plant_hibernate_cycle_-1);
-    }
+    no_states_plant= 4 + 2*(plant_process_cycles_-1) + 2*(plant_effective_hibernate_cycle_-1);
 
     /* the initial state is the state "idle, empty" */
     std::unordered_set<abs_type> init_plant;
@@ -242,19 +246,25 @@ int main() {
             return (i*no_control_inputs_plant*no_dist_inputs_plant + j*no_dist_inputs_plant + k);
         };
 
-    if (plant_hibernate_cycle_>1) {
+    /* outgoing transitions from idle, empty state */
+    if (plant_effective_hibernate_cycle_>1) {
         post_plant[post_addr_plant(0,1,0)]->push_back(2*plant_process_cycles_+2);
     } else {
         post_plant[post_addr_plant(0,1,0)]->push_back(0);
     }
-    post_plant[post_addr_plant(0,1,1)]->push_back(1);
+    if (plant_effective_hibernate_cycle_>2) {
+        post_plant[post_addr_plant(0,1,1)]->push_back(no_states_plant - (plant_effective_hibernate_cycle_-1));
+    } else {
+        post_plant[post_addr_plant(0,1,1)]->push_back(1);
+    }
 
+    /* outgoing transitions from idle, non empty states */
     post_plant[post_addr_plant(1,0,0)]->push_back(3);
     post_plant[post_addr_plant(1,0,0)]->push_back(2);
     post_plant[post_addr_plant(1,0,1)]->push_back(3);
-    if (plant_hibernate_cycle_>2) {
-        post_plant[post_addr_plant(1,1,0)]->push_back(no_states_plant-plant_hibernate_cycle_+2);
-        post_plant[post_addr_plant(1,1,1)]->push_back(no_states_plant-plant_hibernate_cycle_+2);
+    if (plant_effective_hibernate_cycle_>2) {
+        post_plant[post_addr_plant(1,1,0)]->push_back(no_states_plant-plant_effective_hibernate_cycle_+2);
+        post_plant[post_addr_plant(1,1,1)]->push_back(no_states_plant-plant_effective_hibernate_cycle_+2);
     } else {
         post_plant[post_addr_plant(1,1,0)]->push_back(1);
         post_plant[post_addr_plant(1,1,1)]->push_back(1);
@@ -262,41 +272,56 @@ int main() {
 
     /* busy states */
     for (abs_type i=2; i<=2*plant_process_cycles_+1; i++) {
-        if (i<2*plant_process_cycles_) {
+        if (i<2*plant_process_cycles_ && plant_process_cycles_>1) {
+            /* the intermediate process cycle states */
             if (i%2==0) {
+                /* busy, empty states */
                 post_plant[post_addr_plant(i,0,0)]->push_back(i+2);
                 post_plant[post_addr_plant(i,0,1)]->push_back(i+3);
             } else {
+                /* busy, non-empty states */
                 post_plant[post_addr_plant(i,0,0)]->push_back(i+2);
                 post_plant[post_addr_plant(i,0,1)]->push_back(i+2);
             }
         } else {
+            /* the end of process cycle states */
             if (i%2==0) {
+                /* busy, empty states */
                 post_plant[post_addr_plant(i,1,0)]->push_back(0);
-                post_plant[post_addr_plant(i,1,1)]->push_back(1);
+                if (plant_effective_hibernate_cycle_==1) {
+                    post_plant[post_addr_plant(i,1,1)]->push_back(1);
+                } else {
+                    post_plant[post_addr_plant(i,1,1)]->push_back(no_states_plant - (plant_effective_hibernate_cycle_-1));
+                }
             } else {
+                /* busy, non-empty states */
                 post_plant[post_addr_plant(i,0,0)]->push_back(2);
                 post_plant[post_addr_plant(i,0,0)]->push_back(3);
                 post_plant[post_addr_plant(i,0,1)]->push_back(3);
-                post_plant[post_addr_plant(i,1,0)]->push_back(1);
-                post_plant[post_addr_plant(i,1,1)]->push_back(1);
+                if (plant_effective_hibernate_cycle_==1) {
+                    post_plant[post_addr_plant(i,1,0)]->push_back(1);
+                    post_plant[post_addr_plant(i,1,1)]->push_back(1);
+                } else {
+                    post_plant[post_addr_plant(i,1,0)]->push_back(no_states_plant - (plant_effective_hibernate_cycle_-1));
+                    post_plant[post_addr_plant(i,1,1)]->push_back(no_states_plant - (plant_effective_hibernate_cycle_-1));
+                }
             }
         }
     }
 
     /* hibernating (idle, empty) states */
-    for (abs_type i=2*plant_process_cycles_+2, counter=plant_hibernate_cycle_-1; counter>0; i++, counter--) {
+    for (abs_type i=2*plant_process_cycles_+2, counter=plant_effective_hibernate_cycle_-1; counter>0; i++, counter--) {
         if (counter>1) {
             post_plant[post_addr_plant(i,1,0)]->push_back(i+1);
             post_plant[post_addr_plant(i,1,1)]->push_back(no_states_plant-counter+1);
         } else {
             post_plant[post_addr_plant(i,1,0)]->push_back(i);
-            post_plant[post_addr_plant(i,1,1)]->push_back(no_states_plant-1);
+            post_plant[post_addr_plant(i,1,1)]->push_back(1);
         }
     }
 
-    /* hibernating (idle, non empty) states */
-    for (abs_type i=2*plant_process_cycles_+plant_hibernate_cycle_+1; i<no_states_plant; i++) {
+    /* hibernating (idle, non-empty) states */
+    for (abs_type i=no_states_plant - (plant_effective_hibernate_cycle_-1); i<no_states_plant; i++) {
         post_plant[post_addr_plant(i,0,0)]->push_back(2);
         post_plant[post_addr_plant(i,0,0)]->push_back(3);
         post_plant[post_addr_plant(i,0,1)]->push_back(3);
@@ -304,8 +329,8 @@ int main() {
             post_plant[post_addr_plant(i,1,0)]->push_back(i+1);
             post_plant[post_addr_plant(i,1,1)]->push_back(i+1);
         } else {
-            post_plant[post_addr_plant(i,1,0)]->push_back(i);
-            post_plant[post_addr_plant(i,1,1)]->push_back(i);
+            post_plant[post_addr_plant(i,1,0)]->push_back(1);
+            post_plant[post_addr_plant(i,1,1)]->push_back(1);
         }
     }
 
@@ -358,11 +383,16 @@ int main() {
     /* create the target states for the plant: the two states with the highest hibernating time are in the target */
     std::unordered_set<abs_type> target_states_plant;
     if (plant_hibernate_cycle_>1) {
-        target_states_plant.insert(2*plant_process_cycles_+plant_hibernate_cycle_);
-        target_states_plant.insert(no_states_plant-1);
-    } else {
+        target_states_plant.insert(no_states_plant-plant_effective_hibernate_cycle_);
+        target_states_plant.insert(1);
+    } else if (plant_hibernate_cycle_==1) {
         target_states_plant.insert(0);
         target_states_plant.insert(1);
+    } else {
+        /* all states are in the target */
+        for (abs_type i=0; i<no_states_plant; i++) {
+            target_states_plant.insert(i);
+        }
     }
     Str_file = Str_input_folder;
     Str_file += "/target_states_plant.txt";

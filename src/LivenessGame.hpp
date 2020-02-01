@@ -92,8 +92,8 @@ public:
             || allowed_joint_inputs.size()!=no_states) {
             throw std::runtime_error("LivenessGame(constructor): the size of allowed input vectors do not match with the number of monitor states.\n");
         }
-        /* restrict the transitions according to the allowed control and joint inputs */
-        for (abs_type im=0; im<no_states; im++) {
+        /* restrict the transitions from the non-sink states according to the allowed control and joint inputs */
+        for (abs_type im=2; im<no_states; im++) {
             for (abs_type j=0; j<no_control_inputs; j++) {
                 bool bad_control_input=false;
                 if ((allowed_control_inputs[im]->size()!=0) &&
@@ -420,6 +420,7 @@ public:
         /* solve the liveness game with sure semantics */
         std::vector<unordered_set<abs_type>*> sure_win = solve_liveness_game("sure");
         /* debugging */
+        writeToFile("Outputs/monitor_live.txt");
         writeVecSet("Outputs/sure_live.txt","SURE_LIVE",sure_win,"w");
         /* end of debugging */
         /* if all the initial states are sure winning, then the set of spoiling behaviors is empty */
@@ -517,8 +518,14 @@ public:
         }
         /* trim the unreachable transitions from the monitor */
         trim_transitions();
-//        /* compute the reachable set of states with this updated transition system */
-//        R = compute_reachable_set();
+       /* compute the reachable set of states with this updated transition system */
+        R = compute_reachable_set();
+        /* restrict W to the current reachable set */
+        for (abs_type i=0; i<no_states; i++) {
+            if (R.find(i)==R.end()) {
+                W.erase(i);
+            }
+        }
         /* save the old target states, as target states will be updated */
         std::unordered_set<abs_type> monitor_target_states_old=monitor_target_states_;
         /* remove those targets which are not in the reachable part of maybe winning region */
