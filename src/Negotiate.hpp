@@ -87,19 +87,61 @@ public:
         int k_old[2]={-1,-1};
         /* the flag which is true if a solution is reached */
         bool success;
+        /* index of the component starting negotiation: inconsequential to the outcome */
+        int starting_component=0;
+        /* for warm-starting the negotiation process by the initially computed spoilers for the starting component */
+        negotiation::SafetyAutomaton* s_init = new negotiation::SafetyAutomaton();
+        std::cout << "\n\nInitiating pre-computation of spoilers for the starting component " << starting_component << "\n";
+        int init_winning = compute_spoilers_overall(starting_component,s_init);
+        /* if the game is losing for the starting component, then change the starting component and try again */
+        if (init_winning==0) {
+            std::cout << "\tThe game is sure losing for component " << starting_component << ".\n";
+            /* flip the starting component and compute the spoiling behavior */
+            starting_component=1-starting_component;
+            std::cout << "Initiating pre-computation of spoilers for the new starting component " << starting_component << "\n";
+            std::cout << "\tComputing spoiler for component " << starting_component << ".\n";
+            init_winning=compute_spoilers_overall(starting_component,s_init);
+            if(init_winning==0) {
+                std::cout << "The game is sure losing for both components. Negotiation is not possible. Terminating.\n";
+                return false;
+            }
+        }
         /* negotiate until either a solution is found, or until increasing k does not change anything */
         while (1) {
             /* stop when maximum depth is reached */
             if (k==max_depth_) {
                 std::cout << "Maximum search depth of spoiling behavior reached. No solution found. Terminating." << '\n';
             }
-            /* index of the component starting negotiation: inconsequential to the outcome */
-            int starting_component=0;
-            /* number of components which can surely win so far: initially 0 */
-            int done=0;
             /* recursively perform the negotiation */
             std::cout << "current depth = " << k << std::endl;
-            bool success = recursive_negotiation(k,k_now,starting_component,done);
+            /* flag for checking success */
+            bool success;
+            if (init_winning==2) {
+                /* the initial component is sure winning, so start with the other component, and noting that one of the components is winning */
+                std::cout << "\tThe game is sure winning for component " << starting_component << "." << '\n';
+                success = recursive_negotiation(k,k_now,1-starting_component,1);
+            } else {
+                /* find the spoilers for the starting_component upto the current depth, and update the current set of assumptions and guarantees */
+                std::cout << "\tCompressing spoilers for component " << starting_component << "." << '\n';
+                /* object for minimizing the spoiling behaviors */
+                negotiation::Spoilers spoiler(s_init);
+                /* minimize spoilers */
+                spoiler.boundedBisim(k);
+                /* update the actual depth of minimization achieved */
+                k_now[starting_component]=spoiler.k_;
+                /* determinize the minimized spoiler automaton */
+                spoiler.spoilers_mini_->determinize();
+                /* minimize the guarantee automaton further before saving */
+                negotiation::Spoilers guarantee_final(spoiler.spoilers_mini_);
+                guarantee_final.boundedBisim();
+                /* update the guarantee required from the other component */
+                *guarantee_[1-starting_component]=*guarantee_final.spoilers_mini_;
+                 /* debug */
+                guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
+                guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
+                /* debug end */
+                success = recursive_negotiation(k,k_now,1-starting_component,0);
+            }
             if (success) {
                 return true;
             } else {
@@ -145,6 +187,7 @@ public:
         // guarantee_[c]->writeToFile(Char);
         // /* end of debugging */
         negotiation::SafetyAutomaton* s = new negotiation::SafetyAutomaton();
+        std::cout << "\tComputing spoiler for component " << c << ".\n";
         int flag = compute_spoilers_overall(c,s);
        //  /* debug */
        // s->writeToFile("Outputs/spoiler.txt");
@@ -162,8 +205,8 @@ public:
             std::cout << "\tThe game is sure winning for component " << c << "." << '\n';
             return recursive_negotiation(k,k_act,1-c,done+1);
         } else {
-            /* find the spoilers for component c, and update the current set of assumptions and guarantees */
-            std::cout << "\tComputing spoilers for component " << c << "." << '\n';
+            /* compress the spoilers for component c, and update the current set of assumptions and guarantees */
+            std::cout << "\tCompressing spoilers for component " << c << "." << '\n';
             negotiation::Spoilers spoiler(s);
             spoiler.boundedBisim(k);
             if (k_act[c]==-1) {
