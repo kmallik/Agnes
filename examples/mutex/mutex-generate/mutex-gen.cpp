@@ -15,11 +15,11 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define pr1_deadline_ 15
- #define pr2_deadline_ 15
- #define pr1_max_period_ 3
- #define pr2_max_period_ 3
- #define pr1_data_size_ 3
+ #define pr1_deadline_ 6
+ #define pr2_deadline_ 6
+ #define pr1_max_period_ 2
+ #define pr2_max_period_ 2
+ #define pr1_data_size_ 2
  #define pr2_data_size_ 2
 
 using namespace std;
@@ -78,15 +78,15 @@ int main() {
         abs_type no_states = 4*ds[pid]*dl[pid]*mp[pid] + 3;
         /* the id of the writing related states are determined using the following lambda expression */
         auto state_id = [&](abs_type i, abs_type j, abs_type k, abs_type l) -> abs_type {
-            if (k==0) {
+            if (j==0) {
+                /* task completed */
+                return 2;
+            } else if (k==0) {
                 /* overall time-out */
                 return 0;
             } else if (l==0) {
                 /* period time-out */
                 return 1;
-            } else if (j==0) {
-                /* task completed */
-                return 2;
             } else {
                 return (i*ds[pid]*dl[pid]*mp[pid] + (j-1)*dl[pid]*mp[pid] + (k-1)*mp[pid] + (l-1) + 3);
             }
