@@ -49,8 +49,31 @@ int main() {
     std::vector<std::unordered_set<negotiation::abs_type>*> sure_win=monitor.solve_safety_game(safe_states,"sure");
     std::vector<std::unordered_set<negotiation::abs_type>*> maybe_win=monitor.solve_safety_game(safe_states,"maybe");
 
-//    negotiation::SafetyAutomaton* spoiler_full = new negotiation::SafetyAutomaton;
-//    bool out=monitor.find_spoilers(spoiler_full);
+   negotiation::SafetyAutomaton* spoiler_full = new negotiation::SafetyAutomaton;
+   bool out=monitor.find_spoilers(sure_win, maybe_win, spoiler_full);
+
+   checkMakeDir("Outputs");
+   spoiler_full->writeToFile("Outputs/spoiler.txt");
+
+   std::vector<std::string*> state_labels;
+   for (negotiation::abs_type i=0; i<c.no_states; i++) {
+       std::string* s=new std::string;
+       *s=std::to_string(i);
+       state_labels.push_back(s);
+   }
+   std::vector<std::string*> control_input_labels, dist_input_labels;
+   for (negotiation::abs_type j=0; j<c.no_control_inputs; j++) {
+       std::string* s=new std::string;
+       *s=std::to_string(j);
+       control_input_labels.push_back(s);
+   }
+   for (negotiation::abs_type k=0; k<c.no_dist_inputs; k++) {
+       std::string* s=new std::string;
+       *s=std::to_string(k);
+       dist_input_labels.push_back(s);
+   }
+   c.createDOT("Outputs/c_graph.gv","Component",state_labels, control_input_labels, dist_input_labels);
+   spoiler_full->createDOT("Outputs/spoiler_graph.gv","Graph1",dist_input_labels);
 //
 //    /* read the spoiler automaton */
 ////    negotiation::SafetyAutomaton spoiler_full;

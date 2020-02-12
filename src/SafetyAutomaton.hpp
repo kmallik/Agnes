@@ -475,6 +475,86 @@ public:
     inline int addr(const abs_type i, const abs_type j) const {
         return (i*no_inputs_ + j);
     }
+    /*! Save the description of the safety automaton as a directed graph */
+    void createDOT(const std::string& filename,
+                    const std::string& graph_name,
+                    const std::vector<std::string*> dist_input_labels) {
+        /* the number of elements in edge_labels needs to match with the number of inputs */
+        if (dist_input_labels.size()!=no_inputs_) {
+            throw std::runtime_error("SafetyAutomaton:createDOT: Number of edge labels does not match with the number of inputs.");
+        }
+        /* the edges are labeled with disturbance input + a special symbol for representing universal choice of disturbance inputs */
+        std::vector<std::string*> edge_labels = dist_input_labels;
+        std::string* s = new std::string;
+        *s="-";
+        edge_labels.push_back(s);
+        /* create a new post array with the universal disturbance input symbol */
+        std::unordered_set<abs_type>** post_new=new std::unordered_set<abs_type>*[no_states_*(no_inputs_+1)];
+        for (abs_type i=0; i<no_states_*(no_inputs_+1); i++) {
+            std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
+            post_new[i]=s;
+        }
+        /* the address of the post vector in the "transitions" array is determined using the following lambda expression */
+        auto post_addr = [&](abs_type x, abs_type w) -> abs_type {
+            return (x*(no_inputs_+1) + w);
+        };
+        /* the set of all states in one vector */
+        std::unordered_set<abs_type> all_states;
+        for (abs_type i=0; i<no_states_; i++) {
+            all_states.insert(i);
+        }
+        for (abs_type i=0; i<no_states_; i++) {
+            /* first add all the universal successors */
+            /* check the universal successors for this control input */
+            std::unordered_set<abs_type> univ_succ=all_states;
+            for (abs_type k=0; k<no_inputs_; k++) {
+                univ_succ=setIntersect(univ_succ,*post_[addr(i,k)]);
+            }
+            /* associate the universal successors with the special input with index no_inputs_ */
+            for (auto i2=univ_succ.begin(); i2!=univ_succ.end(); ++i2) {
+                post_new[post_addr(i,no_inputs_)]->insert(*i2);
+            }
+            /* next, add the non-universal successors */
+            for (abs_type k=0; k<no_inputs_; k++) {
+                for (auto i2=post_[addr(i,k)]->begin(); i2!=post_[addr(i,k)]->end(); ++i2) {
+                    if (univ_succ.find(*i2)==univ_succ.end()) {
+                        post_new[post_addr(i,k)]->insert(*i2);
+                    }
+                }
+            }
+        }
+        /* create state labels */
+        std::vector<std::string*> state_labels;
+        for (abs_type i=0; i<no_states_; i++) {
+            std::string* s=new std::string;
+            *s=std::to_string(i);
+            state_labels.push_back(s);
+        }
+        /* write the graph */
+        int flag=createDiGraph<abs_type>(filename, graph_name, state_labels, edge_labels, post_new);
+    }
+private:
+    /* intersect two sets */
+    template<class T>
+    std::unordered_set<T> setIntersect(const std::unordered_set<T>& s1, const std::unordered_set<T>& s2) {
+        std::unordered_set<T> s;
+        for (auto i1=s1.begin(); i1!=s1.end(); ++i1) {
+            if (s2.find(*i1)!=s2.end()) {
+                /* the current element is in the intersection */
+                s.insert(*i1);
+            }
+        }
+        return s;
+    }
+    /* union two sets */
+    template<class T>
+    std::vector<T> setUnion(const std::unordered_set<T>& s1, const std::unordered_set<T>& s2) {
+        std::vector<T> s=s1;
+        for (auto i2=s2.begin(); i2!=s2.end(); ++i2) {
+            s.insert(*i2);
+        }
+        return s;
+    }
 };/* end of class defintion */
 }/* end of namespace negotiation */
 #endif

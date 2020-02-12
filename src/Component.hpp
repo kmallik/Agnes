@@ -12,6 +12,7 @@
 #include <string>
 
 #include "FileHandler.hpp"
+#include "DotInterface.hpp"
 
 /** @namespace negotiation **/
 namespace negotiation {
@@ -126,6 +127,181 @@ public:
      * \param[out] j           control input index */
     inline abs_type cont_ind(const abs_type l) {
         return (l / no_dist_inputs);
+    }
+    /*! Save the description of the safety automaton as a directed graph */
+    void createDOT(const std::string& filename,
+                    const std::string& graph_name,
+                    const std::vector<std::string*> state_labels,
+                    const std::vector<std::string*> control_input_labels,
+                    const std::vector<std::string*> dist_input_labels) {
+        /* the number of elements in state_labels needs to match with the number of states */
+        if (state_labels.size()!=no_states) {
+            throw std::runtime_error("Component:createDOT: Number of state labels does not match with the number of states.");
+        }
+        /* the number of elements in control_input_labels needs to match with the number of inputs */
+        if (control_input_labels.size()!=no_control_inputs) {
+            throw std::runtime_error("Component:createDOT: Number of control input labels does not match with the number of control inputs.");
+        }
+        /* the number of elements in dist_input_labels needs to match with the number of inputs */
+        if (dist_input_labels.size()!=no_dist_inputs) {
+            throw std::runtime_error("Component:createDOT: Number of disturbance input labels does not match with the number of disturbance inputs.");
+        }
+        /* hyphen is a reserved label for universal choice for both control or joint inputs */
+        for (int i=0; i<control_input_labels.size(); i++) {
+            if (*control_input_labels[i]=="-") {
+                throw std::runtime_error("Component:createDOT: hyphen cannot be used as a label for control inputs.");
+            }
+        }
+        for (int i=0; i<dist_input_labels.size(); i++) {
+            if (*dist_input_labels[i]=="-") {
+                throw std::runtime_error("Component:createDOT: hyphen cannot be used as a label for disturbance inputs.");
+            }
+        }
+        /* create labels for joint inputs: add extra labels for cases when all the inputs of one type have the same effect on the transitions */
+        std::vector<std::string*> joint_input_labels;
+        for (abs_type j=0; j<no_control_inputs+1; j++) {
+            for (abs_type k=0; k<no_dist_inputs+1; k++) {
+                std::string* s=new std::string;
+                *s="";
+                if (j==no_control_inputs) {
+                    *s+="-";
+                } else {
+                    *s+=*control_input_labels[j];
+                }
+                *s+="/";
+                if (k==no_dist_inputs) {
+                    *s+="-";
+                } else {
+                    *s+=*dist_input_labels[k];
+                }
+                joint_input_labels.push_back(s);
+            }
+        }
+        /* the address of the post vector in the "transitions" array is determined using the following lambda expression */
+        auto post_addr = [&](abs_type x, abs_type u, abs_type w) -> abs_type {
+            return (x*(no_control_inputs+1)*(no_dist_inputs+1) + u*(no_dist_inputs+1) + w);
+        };
+        /* create a post array */
+        std::unordered_set<abs_type>** post_array=new std::unordered_set<abs_type>*[no_states*(no_control_inputs+1)*(no_dist_inputs+1)];
+        for (abs_type i=0; i<no_states*(no_control_inputs+1)*(no_dist_inputs+1); i++) {
+            std::unordered_set<abs_type>* set=new std::unordered_set<abs_type>;
+            post_array[i]=set;
+        }
+        /* the set of all states in one vector */
+        std::vector<abs_type> all_states;
+        for (abs_type i=0; i<no_states; i++) {
+            all_states.push_back(i);
+        }
+        for (abs_type i=0; i<no_states; i++) {
+            /* keep track of the universal successors */
+            std::vector<abs_type> overall_univ_succ;
+            for (abs_type j=0; j<no_control_inputs; j++) {
+                /* check the universal successors for this control input */
+                std::vector<abs_type> univ_succ=all_states;
+                for (abs_type k=0; k<no_dist_inputs; k++) {
+                    univ_succ=vecIntersect(univ_succ,*post[addr(i,j,k)]);
+                }
+                /* bookkeeping */
+                overall_univ_succ=vecUnion(overall_univ_succ,univ_succ);
+                /* the universal successors for this control inputs corresponding to the special disturbance index "no_dist_inputs" */
+                for (auto l=univ_succ.begin(); l!=univ_succ.end(); l++) {
+                    post_array[post_addr(i,j,no_dist_inputs)]->insert(*l);
+                }
+            }
+            for (abs_type k=0; k<no_dist_inputs; k++) {
+                /* check the universal successors for this disturbance input */
+                std::vector<abs_type> univ_succ=all_states;
+                for (abs_type j=0; j<no_control_inputs; j++) {
+                    univ_succ=vecIntersect(univ_succ,*post[addr(i,j,k)]);
+                }
+                /* if some of the universal successors of this disturbance input is also in the universal successor of some other control input, then move that successor to the joint universal control and universal disturbance successor */
+                for (auto l=univ_succ.begin(); l!=univ_succ.end(); ++l) {
+                    bool not_univ_for_control=true;
+                    for (abs_type j=0; j<no_control_inputs; j++) {
+                        if (post_array[post_addr(i,j,no_dist_inputs)]->find(*l) != post_array[post_addr(i,j,no_dist_inputs)]->end()) {
+                            not_univ_for_control=false;
+                            post_array[post_addr(i,j,no_dist_inputs)]->erase(*l);
+                            post_array[post_addr(i,no_control_inputs,no_dist_inputs)]->insert(*l);
+                            break;
+                        }
+                    }
+                    if (not_univ_for_control) {
+                        /* the rest of the universal successors for this disturbance inputs corresponding to the special control index "no_control_inputs" */
+                        for (auto l=univ_succ.begin(); l!=univ_succ.end(); l++) {
+                            post_array[post_addr(i,no_control_inputs,k)]->insert(*l);
+                        }
+
+                    }
+                }
+                /* bookkeeping */
+                overall_univ_succ=vecUnion(overall_univ_succ,univ_succ);
+            }
+            /* add the non-universal successors to the list of post */
+            for (abs_type j=0; j<no_control_inputs; j++) {
+                for (abs_type k=0; k<no_dist_inputs; k++) {
+                    for (auto l=post[addr(i,j,k)]->begin(); l!=post[addr(i,j,k)]->end(); l++) {
+                        bool not_in_universal=true;
+                        for (auto i2=overall_univ_succ.begin(); i2!=overall_univ_succ.end(); ++i2) {
+                            if (*l==*i2) {
+                                not_in_universal=false;
+                                break;
+                            }
+                        }
+                        if (not_in_universal) {
+                            post_array[post_addr(i,j,k)]->insert(*l);
+                        }
+                    }
+                }
+            }
+        }
+        /* write the graph */
+        int flag=createDiGraph<abs_type>(filename, graph_name, state_labels, joint_input_labels, post_array);
+
+        delete[] post_array;
+    }
+private:
+    /* union two vectors */
+    template<class T>
+    std::vector<T> vecUnion(const std::vector<T>& v1, const std::vector<T>& v2) {
+        std::vector<T> v=v1;
+        for (auto i2=v2.begin(); i2!=v2.end(); ++i2) {
+            bool this_element_new=true;
+            for (auto i1=v.begin(); i1!=v.end(); ++i1) {
+                if (*i1==*i2) {
+                    /* the current element was already added */
+                    this_element_new=false;
+                    break;
+                }
+            }
+            if (this_element_new) {
+                v.push_back(*i2);
+            }
+        }
+        return v;
+    }
+    /* intersect two vectors */
+    template<class T>
+    std::vector<T> vecIntersect(const std::vector<T>& v1, const std::vector<T>& v2) {
+        std::vector<T> v;
+        for (auto i1=v1.begin(); i1!=v1.end(); ++i1) {
+            for (auto i2=v2.begin(); i2!=v2.end(); ++i2) {
+                if (*i1==*i2) {
+                    /* the current element is in the intersection */
+                    v.push_back(*i1);
+                    break;
+                }
+            }
+        }
+        return v;
+    }
+    /* union two sets */
+    template<class T>
+    std::vector<T> setUnion(const std::unordered_set<T>& s1, const std::unordered_set<T>& s2) {
+        std::vector<T> s=s1;
+        for (auto i2=s2.begin(); i2!=s2.end(); ++i2) {
+            s.insert(*i2);
+        }
+        return s;
     }
 };
 

@@ -15,10 +15,10 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define pr1_deadline_ 6
- #define pr2_deadline_ 6
- #define pr1_max_period_ 2
- #define pr2_max_period_ 2
+ #define pr1_deadline_ 9
+ #define pr2_deadline_ 9
+ #define pr1_max_period_ 3
+ #define pr2_max_period_ 3
  #define pr1_data_size_ 2
  #define pr2_data_size_ 2
 

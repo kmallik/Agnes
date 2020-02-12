@@ -379,7 +379,7 @@ void writeMember(const std::string& filename, const std::string& member_name, T 
         file.close();
     } else {
         try {
-            throw std::runtime_error("FileHandler:writeMember: Unable to open input file.");
+            throw std::runtime_error("FileHandler:writeMember: Unable to open output file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
         }
@@ -409,7 +409,7 @@ void writeVec(const std::string& filename, const std::string& vec_name, std::vec
         file.close();
     } else {
         try {
-            throw std::runtime_error("FileHandler:writeVec: Unable to open input file.");
+            throw std::runtime_error("FileHandler:writeVec: Unable to open output file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
         }
@@ -439,7 +439,7 @@ void writeSet(const std::string& filename, const std::string& set_name, std::uno
         file.close();
     } else {
         try {
-            throw std::runtime_error("FileHandler:writeSet: Unable to open input file.");
+            throw std::runtime_error("FileHandler:writeSet: Unable to open output file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
         }
@@ -476,7 +476,7 @@ void writeArrVec(const std::string& filename, const std::string& arr_name, std::
         file.close();
     } else {
         try {
-            throw std::runtime_error("FileHandler:writeArrVec: Unable to open input file.");
+            throw std::runtime_error("FileHandler:writeArrVec: Unable to open output file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
         }
@@ -513,7 +513,7 @@ void writeArrSet(const std::string& filename, const std::string& arr_name, std::
         file.close();
     } else {
         try {
-            throw std::runtime_error("FileHandler:writeArrVec: Unable to open input file.");
+            throw std::runtime_error("FileHandler:writeArrVec: Unable to open output file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
         }
@@ -550,7 +550,7 @@ void writeVecSet(const std::string& filename, const std::string& vec_name, std::
         file.close();
     } else {
         try {
-            throw std::runtime_error("FileHandler:writeVecSet: Unable to open input file.");
+            throw std::runtime_error("FileHandler:writeVecSet: Unable to open output file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
         }
