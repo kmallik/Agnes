@@ -531,7 +531,7 @@ public:
             state_labels.push_back(s);
         }
         /* write the graph */
-        int flag=createDiGraph<abs_type>(filename, graph_name, state_labels, edge_labels, post_new);
+        int flag=createDiGraph<abs_type>(filename, graph_name, state_labels, init_, edge_labels, post_new);
     }
 private:
     /* intersect two sets */

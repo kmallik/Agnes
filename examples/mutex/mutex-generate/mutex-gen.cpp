@@ -141,6 +141,53 @@ int main() {
                 }
             }
         }
+        /* state labels and state clusters needed for the visualization */
+        std::vector<std::string*> state_labels;
+        for (int i=0; i<no_states; i++) {
+            std::string* s=new std::string;
+            *s="";
+            state_labels.push_back(s);
+        }
+        *state_labels[0]="TO";
+        *state_labels[1]="period_TO";
+        *state_labels[2]="finished";
+        std::vector<std::unordered_set<abs_type>*> state_clusters;
+        /* the sinks are in one cluster */
+        std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+        set->insert(0);
+        set->insert(1);
+        set->insert(2);
+        state_clusters.push_back(set);
+        for (int j=1; j<=ds[pid]; j++) {
+            for (int k=1; k<=dl[pid]; k++) {
+                for (int l=1; l<=mp[pid]; l++) {
+                    std::unordered_set<abs_type>* this_cluster=new std::unordered_set<abs_type>;
+                    for (int i=0; i<=3; i++) {
+                        switch (i) {
+                            case 0:
+                                *state_labels[state_id(i,j,k,l)]+="idle_";
+                                break;
+                            case 1:
+                                *state_labels[state_id(i,j,k,l)]+="write_";
+                                break;
+                            case 2:
+                                *state_labels[state_id(i,j,k,l)]+="conflict_";
+                                break;
+                            case 3:
+                                *state_labels[state_id(i,j,k,l)]+="success_";
+                                break;
+                        }
+                        *state_labels[state_id(i,j,k,l)]+=std::to_string(j);
+                        *state_labels[state_id(i,j,k,l)]+="_";
+                        *state_labels[state_id(i,j,k,l)]+=std::to_string(k);
+                        *state_labels[state_id(i,j,k,l)]+="_";
+                        *state_labels[state_id(i,j,k,l)]+=std::to_string(l);
+                        this_cluster->insert(state_id(i,j,k,l));
+                    }
+                    state_clusters.push_back(this_cluster);
+                }
+            }
+        }
         /* the post array */
         std::vector<abs_type>** post = new std::vector<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
         /* initialize post */
@@ -228,13 +275,19 @@ int main() {
         writeMember<abs_type>(Str_file, "NO_OUTPUTS", no_outputs);
         writeVec<abs_type>(Str_file, "STATE_TO_OUTPUT", state_to_output);
         writeArrVec<abs_type>(Str_file, "TRANSITION_POST", post, no_states*no_control_inputs*no_dist_inputs);
+        writeVec<std::string>(Str_file, "STATE_LABELS", state_labels);
+        writeMember<abs_type>(Str_file, "NO_CLUSTERS", state_clusters.size());
+        writeVecSet<abs_type>(Str_file, "STATE_CLUSTERS", state_clusters);
 
         /* ****** create the specifications ******** */
         /* create the safe set: all the states except the time-out states (index 0 and 1) are safe */
         std::unordered_set<abs_type> safe_states;
-        for (abs_type i=2; i<no_states; i++) {
+        for (abs_type i=2; i<no_states; i++) { /* the non time over states are safe */
             safe_states.insert(i);
         }
+        // for (abs_type i=0; i<no_states; i++) { /* all the states are safe */
+        //     safe_states.insert(i);
+        // }
         Str_file = Str_input_folder;
         Str_file += "/safe_states_";
         Str_file += std::to_string(pid);
@@ -242,9 +295,12 @@ int main() {
         create(Str_file);
         writeMember<abs_type>(Str_file, "NO_SAFE_STATES", safe_states.size());
         writeSet<abs_type>(Str_file, "SET_SAFE_STATES", safe_states);
-        /* create the target state set for liveness spec: the "task completed" state (index 2) */
+        /* create the target state set for liveness spec */
         std::unordered_set<abs_type> target_states;
-        target_states.insert(2);
+        for (abs_type i=0; i<no_states; i++) { /* all the states are in target */
+            target_states.insert(i);
+        }
+        // target_states.insert(2); /* the "task completed" state (index 2) */
         Str_file = Str_input_folder;
         Str_file += "/target_states_";
         Str_file += std::to_string(pid);
@@ -275,6 +331,11 @@ int main() {
     Length = Str_output_folder.copy(char_copy, Str_output_folder.length() + 1);
     char_copy[Length] = '\0';
     checkMakeDir(char_copy);
+    Str_copy = "cp files/visualize ";
+    Str_copy += Str_output_folder;
+    Length = Str_copy.copy(char_copy, Str_copy.length() + 1);
+    char_copy[Length] = '\0';
+    system(char_copy);
 
 
 //    delete[] dl;

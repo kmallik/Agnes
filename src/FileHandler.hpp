@@ -129,6 +129,61 @@ int readVec(const std::string& filename, std::vector<T>& v, size_t no_elem, cons
     }
 }
 
+/* read vector of pointers from file */
+template<class T>
+int readVec(const std::string& filename, std::vector<T*>& v, size_t no_elem, const std::string& vec_name) {
+    std::ifstream file;
+    file.open(filename);
+    if (file.is_open()) {
+        std::string line;
+        while(std::getline(file,line)) {
+            if(line.find(vec_name)!=std::string::npos) {
+                for (size_t i=0; i<no_elem; i++) {
+                    if(std::getline(file,line)) {
+                        std::stringstream stream(line);
+                        std::locale loc;
+                        // if (!std::isdigit(line[0],loc)) {
+                        //     try {
+                        //         throw std::runtime_error("FileHandler:readVec: Number of rows do not match with number of elements.");
+                        //     } catch (std::exception &e) {
+                        //         std::cout << e.what() << "\n";
+                        //         return 0;
+                        //     }
+                        // } else {
+                            T* val=new T;
+                            stream >> *val;
+                            v.push_back(val);
+                        // }
+                    } else {
+                        try {
+                            throw std::runtime_error("FileHandler:readVec: Unable to read vector.");
+                        } catch (std::exception &e) {
+                            std::cout << e.what() << "\n";
+                            return 0;
+                        }
+                    }
+                }
+                file.close();
+                return 1;
+            }
+        }
+        /* while loop exited and the vec was not found */
+        try {
+            throw std::runtime_error("FileHandler:readVec: Vector not found.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:readVec: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
+    }
+}
+
 /* read 1-dimensional integer set (unordered) from file */
 template<class T>
 int readSet(const std::string& filename, std::unordered_set<T>& s, size_t no_elem, const std::string& set_name) {
@@ -236,6 +291,62 @@ int readVecArr(const std::string& filename, std::vector<std::array<T,SIZE>>& v, 
     } else {
         try {
             throw std::runtime_error("FileHandler:readVecArr: Unable to open input file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
+    }
+}
+
+/* read vector of pointers to unordered sets (can be thought of as a 2-d table) from file */
+template<class T>
+int readVecSet(const std::string& filename, std::vector<std::unordered_set<T>*>& vec, size_t no_elem, const std::string& vec_name) {
+    std::ifstream file;
+    file.open(filename);
+    if (file.is_open()) {
+        std::string line;
+        /* go through all the lines until a match with arr_name is found */
+        while(std::getline(file,line)) {
+            if(line.find(vec_name)!=std::string::npos) {
+                for (size_t i=0; i<no_elem; i++) {
+                    std::unordered_set<T>* set=new std::unordered_set<T>;
+                    if(std::getline(file,line)) {
+                        if (line.compare("x")==0) {
+                            continue;
+                        } else {
+                            std::stringstream line_stream(line);
+                            while (line_stream.good()) {
+                                T x;
+                                line_stream >> x;
+                                if (!line_stream.fail()) {
+                                    set->insert(x);
+                                }
+                            }
+                            vec.push_back(set);
+                        }
+                    } else {
+                        try {
+                            throw std::runtime_error("FileHandler:readVecSet: Unable to read vector.");
+                        } catch (std::exception &e) {
+                            std::cout << e.what() << "\n";
+                            return 0;
+                        }
+                    }
+                }
+                file.close();
+                return 1;
+            }
+        }
+        /* while loop exited and the vec was not found */
+        try {
+            throw std::runtime_error("FileHandler:readVecSet: Vector not found.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+            return 0;
+        }
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:readVecSet: Unable to open input file.");
         } catch (std::exception &e) {
             std::cout << e.what() << "\n";
             return 0;
@@ -405,6 +516,36 @@ void writeVec(const std::string& filename, const std::string& vec_name, std::vec
         file << "# " << vec_name << "\n";
         for (int i=0; i<v.size(); i++) {
             file << v[i] << "\n";
+        }
+        file.close();
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeVec: Unable to open output file.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
+}
+
+/* write 1-dimensional vector of pointers to file */
+template<class T>
+void writeVec(const std::string& filename, const std::string& vec_name, std::vector<T*>& v, const char* mode="a") {
+    std::ofstream file;
+    if (!strcmp(mode,"a")) {
+        file.open(filename, std::ios_base::app);
+    } else if (!strcmp(mode,"w")) {
+        file.open(filename, std::ios_base::out);
+    } else {
+        try {
+            throw std::runtime_error("FileHandler:writeVec: Invalid mode.");
+        } catch (std::exception &e) {
+            std::cout << e.what() << "\n";
+        }
+    }
+    if (file.is_open()) {
+        file << "# " << vec_name << "\n";
+        for (int i=0; i<v.size(); i++) {
+            file << *v[i] << "\n";
         }
         file.close();
     } else {

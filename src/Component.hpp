@@ -128,10 +128,11 @@ public:
     inline abs_type cont_ind(const abs_type l) {
         return (l / no_dist_inputs);
     }
-    /*! Save the description of the safety automaton as a directed graph */
+    /*! Save the description of the safety automaton as a directed graph with clusterd vertices */
     void createDOT(const std::string& filename,
                     const std::string& graph_name,
                     const std::vector<std::string*> state_labels,
+                    const std::vector<std::unordered_set<abs_type>*> state_clusters,
                     const std::vector<std::string*> control_input_labels,
                     const std::vector<std::string*> dist_input_labels) {
         /* the number of elements in state_labels needs to match with the number of states */
@@ -255,9 +256,19 @@ public:
             }
         }
         /* write the graph */
-        int flag=createDiGraph<abs_type>(filename, graph_name, state_labels, joint_input_labels, post_array);
+        int flag=createDiGraph<abs_type>(filename, graph_name, state_labels, state_clusters, init_, joint_input_labels, post_array);
 
         delete[] post_array;
+    }
+    /*! Save the description of the safety automaton as a simple directed graph  without any clusters of vertices*/
+    void createDOT(const std::string& filename,
+                    const std::string& graph_name,
+                    const std::vector<std::string*> state_labels,
+                    const std::vector<std::string*> control_input_labels,
+                    const std::vector<std::string*> dist_input_labels) {
+        /* create an empty list of clusters of vertices and call the createDOT function with clusters */
+        std::vector<std::unordered_set<abs_type>*> state_clusters;
+        createDOT(filename, graph_name, state_labels, state_clusters, control_input_labels, dist_input_labels);
     }
 private:
     /* union two vectors */
