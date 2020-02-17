@@ -277,8 +277,8 @@ public:
         SafetyAutomaton* spoilers_liveness = new SafetyAutomaton;
         /* assume that the liveness game is winning */
         int flag2=2;
-        /* if the set of target states is all the states, then skip the liveness part (the liveness game is trivially winning in that case) */
-        if (target_states_[c]->size()!=components_[c]->no_states) {
+        // /* if the set of target states is all the states, then skip the liveness part (the liveness game is trivially winning in that case) */
+        // if (target_states_[c]->size()!=components_[c]->no_states) {
             std::vector<std::unordered_set<abs_type>*> allowed_joint_inputs;
             if (flag1==2) {
                 /* if the safety game was sure winning, then the only restriction on input choices during the liveness game part comes from the sure winning strategy */
@@ -307,7 +307,7 @@ public:
                 return out_flag;
             }
             spoilers_liveness->trim();
-        }
+        // }
         /* minimize the spoiler_safety automaton  */
         negotiation::Spoilers liveness(spoilers_liveness);
         liveness.boundedBisim();
