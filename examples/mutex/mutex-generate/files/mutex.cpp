@@ -21,6 +21,7 @@
 #include "SafetyGame.hpp"
 #include "Spoilers.hpp"
 #include "Negotiate.hpp"
+#include "TicToc.hpp"
 #define _USE_MATH_DEFINES
 
 using namespace std;
@@ -92,8 +93,11 @@ int main() {
         N.guarantee_[p]->createDOT(file_op, graph_name, dist_input_labels);
     }
 
+    TicToc timer;
     /* perform the negotiation */
+    timer.tic();
     N.iterative_deepening_search();
+    timer.toc();
 
     checkMakeDir("Outputs");
     N.guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");

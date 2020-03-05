@@ -15,11 +15,11 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define pr1_deadline_ 9
- #define pr2_deadline_ 9
+ #define pr1_deadline_ 13
+ #define pr2_deadline_ 13
  #define pr1_max_period_ 3
  #define pr2_max_period_ 3
- #define pr1_data_size_ 2
+ #define pr1_data_size_ 3
  #define pr2_data_size_ 2
 
 using namespace std;
@@ -331,7 +331,7 @@ int main() {
     Length = Str_output_folder.copy(char_copy, Str_output_folder.length() + 1);
     char_copy[Length] = '\0';
     checkMakeDir(char_copy);
-    Str_copy = "cp files/visualize ";
+    Str_copy = "cp files/visualize.sh ";
     Str_copy += Str_output_folder;
     Length = Str_copy.copy(char_copy, Str_copy.length() + 1);
     char_copy[Length] = '\0';
