@@ -262,6 +262,20 @@ public:
         negotiation::SafetyGame monitor(*components_[c],*guarantee_[1-c],*guarantee_[c]);
         std::vector<std::unordered_set<abs_type>*> sure_safe = monitor.solve_safety_game(*safe_states_[c],"sure");
         std::vector<std::unordered_set<abs_type>*> maybe_safe = monitor.solve_safety_game(*safe_states_[c],"maybe");
+        /* debugging: print the number of sure and maybe winning states */
+        int num_maybe=0;
+        int num_sure=0;
+        for (abs_type i=0; i<monitor.no_states; i++) {
+            if (sure_safe[i]->size()!=0) {
+                num_sure++;
+            }
+            if (maybe_safe[i]->size()!=0) {
+                num_maybe++;
+            }
+        }
+        std::cout << "\t\tNumber of sure safe states = " << num_sure << ".\n";
+        std::cout << "\t\tNumber of maybe safe states = " << num_maybe << ".\n";
+        /* debugging end */
         SafetyAutomaton* spoilers_safety = new SafetyAutomaton;
         int flag1 = monitor.find_spoilers(sure_safe, maybe_safe, spoilers_safety);
         /* if some initial states are surely losing the safety specification, then return out_flag=0 */
@@ -269,6 +283,11 @@ public:
             out_flag=0;
             return out_flag;
         }
+        /* debuggig */
+        if (flag1==1) {
+            std::cout << "\t\tSome initial states are not surely safe.\n";
+        }
+        /* debugging end */
         spoilers_safety->trim();
         /* minimize the spoiler_safety automaton  */
         negotiation::Spoilers safety(spoilers_safety);
@@ -301,6 +320,11 @@ public:
             }
             negotiation::LivenessGame monitor_live(monitor, *target_states_[c], sure_safe, allowed_joint_inputs);
             flag2 = monitor_live.find_spoilers(spoilers_liveness);
+            /* debuggig */
+            if (flag2==1) {
+                std::cout << "\t\tSome initial states are not surely winning the liveness condition.\n";
+            }
+            /* debugging end */
             /* if some initial states are surely losing the liveness specification, then return false */
             if (flag2==0) {
                 out_flag=0;
