@@ -419,10 +419,10 @@ public:
 //        negotiation::SafetyAutomaton spoilers;
         /* solve the liveness game with sure semantics */
         std::vector<unordered_set<abs_type>*> sure_win = solve_liveness_game("sure");
-        /* debugging */
-        writeToFile("Outputs/monitor_live.txt");
-        writeVecSet("Outputs/sure_live.txt","SURE_LIVE",sure_win,"w");
-        /* end of debugging */
+//        /* debugging */
+//        writeToFile("Outputs/monitor_live.txt");
+//        writeVecSet("Outputs/sure_live.txt","SURE_LIVE",sure_win,"w");
+//        /* end of debugging */
         /* if all the initial states are sure winning, then the set of spoiling behaviors is empty */
         bool allInitSureWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
@@ -446,9 +446,9 @@ public:
         /* experimental: restoration */
         monitor_target_states_.insert(0);
         /* experimental ends */
-        /* debugging */
-        writeVecSet("Outputs/maybe_live.txt","MAYBE_LIVE",maybe_win_without_assumption_violation,"w");
-        /* end of debugging */
+//        /* debugging */
+//        writeVecSet("Outputs/maybe_live.txt","MAYBE_LIVE",maybe_win_without_assumption_violation,"w");
+//        /* end of debugging */
         /* if not all the initial states are maybe winning, then no negotiation is possible: return false */
         bool allInitMaybeWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
@@ -500,9 +500,9 @@ public:
             }
             bad_pairs.push_back(set);
         }
-        /* debug */
-        writeVecSet("Outputs/interim_bad_pairs.txt","INTERIM_BAD_PAIRS",bad_pairs,"w");
-        /* debug end */
+//        /* debug */
+//        writeVecSet("Outputs/interim_bad_pairs.txt","INTERIM_BAD_PAIRS",bad_pairs,"w");
+//        /* debug end */
         /* update the transition system by removing all the successors of the elements in bad_pairs */
         for (abs_type i=0; i<no_states; i++) {
             for (auto k=bad_pairs[i]->begin(); k!=bad_pairs[i]->end(); ++k) {
@@ -548,7 +548,7 @@ public:
         // monitor_target_states_.insert(0);
         // /* experimental ends here */
         /* initialize set of states for iteratively computing the LiveLockPairs */
-        std::unordered_set<abs_type> T_cur;
+        std::unordered_set<abs_type> T_cur, T_old;
         for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
             T_cur.insert(*i);
         }
@@ -562,25 +562,25 @@ public:
             live_lock_pairs.push_back(set);
         }
         /* repeat until convergence*/
-        while (1) {
-//            /* save the current targets */
-//            T_old=T_cur;
-            /* if all the current target states are in the all reachable maybe winning states, then terminate the loop */
-            bool all_maybe_winning_covered=true;
-            for (auto i=W.begin(); i!=W.end(); ++i) {
-                // /* experimental */
-                // if (*i==0) {
-                //     continue;
-                // }
-                // /* experimental ends here */
-                if (T_cur.find(*i)==T_cur.end()) {
-                    all_maybe_winning_covered=false;
-                    break;
-                }
-            }
-            if (all_maybe_winning_covered) {
-                break;
-            }
+        while (T_old!=T_cur) {
+            /* save the current targets */
+            T_old=T_cur;
+//            /* if all the current target states are in the all reachable maybe winning states, then terminate the loop */
+//            bool all_maybe_winning_covered=true;
+//            for (auto i=W.begin(); i!=W.end(); ++i) {
+//                // /* experimental */
+//                // if (*i==0) {
+//                //     continue;
+//                // }
+//                // /* experimental ends here */
+//                if (T_cur.find(*i)==T_cur.end()) {
+//                    all_maybe_winning_covered=false;
+//                    break;
+//                }
+//            }
+//            if (all_maybe_winning_covered) {
+//                break;
+//            }
             /* update the monitor target states */
             monitor_target_states_=T_cur;
             // /* experimental */
@@ -588,10 +588,10 @@ public:
             // /* experimental ends */
             /* solve sure reachability game */
             sure_win=solve_reach_avoid_game("sure");
-            /* debug */
-            writeVecSet("Outputs/interim_sure_win.txt","INTERIM_SURE_WIN",sure_win,"w");
-            writeToFile("Outputs/monitor.txt");
-            /* debug end */
+//            /* debug */
+//            writeVecSet("Outputs/interim_sure_win.txt","INTERIM_SURE_WIN",sure_win,"w");
+//            writeToFile("Outputs/monitor.txt");
+//            /* debug end */
             // /* experimental cleanup */
             // monitor_target_states_.erase(0);
             // /* experimental cleanup */
@@ -690,9 +690,15 @@ public:
                     }
                 }
             }
-            /* debug */
-            writeVecSet("Outputs/live_lock_pairs.txt","LIVE_LOCK_PAIRS",live_lock_pairs,"w");
-            /* debug end */
+//            /* debug */
+//            writeVecSet("Outputs/live_lock_pairs.txt","LIVE_LOCK_PAIRS",live_lock_pairs,"w");
+//            /* debug end */
+        }
+        /* if the initial states could not be added to the sure winning region, then return 0: no negotiation is possible */
+        for (auto i=init_.begin(); i!=init_.end(); ++i) {
+            if (T_cur.find(*i)==T_cur.end()) {
+                return 0;
+            }
         }
         /* add all the final livelock pairs to bad pairs */
         for (abs_type i=0; i<no_states; i++) {
@@ -718,9 +724,9 @@ public:
         //     }
         // }
         // /* experimental ends here */
-        /* debug */
-        writeVecSet("Outputs/interim_bad_pairs.txt","INTERIM_BAD_PAIRS",bad_pairs,"w");
-        /* debug end */
+//        /* debug */
+//        writeVecSet("Outputs/interim_bad_pairs.txt","INTERIM_BAD_PAIRS",bad_pairs,"w");
+//        /* debug end */
         /* find the reachable states using the updated post */
         R = compute_reachable_set();
 
@@ -784,9 +790,9 @@ public:
             }
         }
         spoilers->addPost(p);
-       /* debug */
-       spoilers->writeToFile("Outputs/interim_liveness_spoiler.txt");
-       /* debug end */
+//       /* debug */
+//       spoilers->writeToFile("Outputs/interim_liveness_spoiler.txt");
+//       /* debug end */
         /* restore post, no_post, monitor_target_states_*/
         monitor_target_states_=monitor_target_states_old;
         for (abs_type l=0; l<no_states*no_control_inputs*no_dist_inputs; l++) {
