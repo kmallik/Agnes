@@ -84,7 +84,7 @@ public:
         int k=0;
         /* actual k used for the length of the spoiling behavior set */
         int k_now[2]={-1,-1};
-        int k_old[2]={-1,-1};
+//        int k_old[2]={-1,-1};
         /* the flag which is true if a solution is reached */
         bool success;
         /* index of the component starting negotiation: inconsequential to the outcome */
@@ -111,6 +111,7 @@ public:
             /* stop when maximum depth is reached */
             if (k==max_depth_) {
                 std::cout << "Maximum search depth of spoiling behavior reached. No solution found. Terminating." << '\n';
+                return false;
             }
             /* recursively perform the negotiation */
             std::cout << "current depth = " << k << std::endl;
@@ -136,25 +137,25 @@ public:
                 guarantee_final.boundedBisim();
                 /* update the guarantee required from the other component */
                 *guarantee_[1-starting_component]=*guarantee_final.spoilers_mini_;
-                 /* debug */
-                guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
-                guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
-                /* debug end */
+//                 /* debug */
+//                guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
+//                guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
+//                /* debug end */
                 success = recursive_negotiation(k,k_now,1-starting_component,0);
             }
             if (success) {
                 return true;
             } else {
-                /* if there was no change in the depth of bounded bisimulation in the first round of spoiler finding, then stop the procedure */
-                if (k_now[0]==k_old[0] && k_now[1]==k_old[1]) {
-                    std::cout << "The search of spoiling behavior got saturated. No solution found. Terminating." << '\n';
-                    return false;
-                } else {
-                    k_old[0]=k_now[0];
-                    k_old[1]=k_now[1];
-                    k_now[0]=-1;
-                    k_now[1]=-1;
-                }
+//                /* if there was no change in the depth of bounded bisimulation in the first round of spoiler finding, then stop the procedure */
+//                if (k_now[0]==k_old[0] && k_now[1]==k_old[1]) {
+//                    std::cout << "The search of spoiling behavior got saturated. No solution found. Terminating." << '\n';
+//                    return false;
+//                } else {
+//                    k_old[0]=k_now[0];
+//                    k_old[1]=k_now[1];
+//                    k_now[0]=-1;
+//                    k_now[1]=-1;
+//                }
                 /* reset the sets of guarantees */
                 guarantee_.clear();
                 /* re-initialize the sets of guarantees as all accepting safety automata */

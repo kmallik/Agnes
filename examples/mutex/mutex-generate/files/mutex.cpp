@@ -31,6 +31,8 @@ using namespace negotiation;
 /* main computation */
 /****************************************************************************/
 int main() {
+    /* maximum depth of negotiation */
+    int k_max = 25;
 
     std::vector<std::string*> component_files, safe_states_files, target_states_files;
     std::string* c1= new std::string("Inputs/pr_0.txt");
@@ -48,7 +50,7 @@ int main() {
     target_states_files.push_back(t1);
     target_states_files.push_back(t2);
 
-    negotiation::Negotiate N(component_files, safe_states_files, target_states_files);
+    negotiation::Negotiate N(component_files, safe_states_files, target_states_files, k_max);
 
     /* save the transition systems in DOT language */
     for (int p=0; p<2; p++) {
