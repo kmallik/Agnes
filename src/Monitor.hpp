@@ -65,7 +65,7 @@ public:
         no_dist_inputs=other.no_dist_inputs;
         abs_type size = no_states*no_control_inputs*no_dist_inputs;
         pre = new std::unordered_set<abs_type>*[size];
-        for (int i=0; i<size; i++) {
+        for (abs_type i=0; i<size; i++) {
             std::unordered_set<abs_type>* v=new std::unordered_set<abs_type>;
             pre[i]=v;
             for (auto j=other.pre[i]->begin(); j!=other.pre[i]->end(); ++j) {
@@ -73,7 +73,7 @@ public:
             }
         }
         post = new std::unordered_set<abs_type>*[size];
-        for (int i=0; i<size; i++) {
+        for (abs_type i=0; i<size; i++) {
             std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
             post[i]=s;
             for (auto j=other.post[i]->begin(); j!=other.post[i]->end(); ++j) {
@@ -194,30 +194,24 @@ public:
         /* compute and store the predecessors, successors, valid inputs, and valid joint inputs for fast synthesis */
         pre=new std::unordered_set<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
         post=new std::unordered_set<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
-        for (int i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
+        for (abs_type i=0; i<no_states*no_control_inputs*no_dist_inputs; i++) {
             std::unordered_set<abs_type> *v=new std::unordered_set<abs_type>;
             pre[i]=v;
             std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
             post[i]=s;
         }
-//        for (int i=0; i<no_states; i++) {
-//            std::unordered_set<abs_type> *a = new std::unordered_set<abs_type>;
-//            valid_input.push_back(a);
-//            std::unordered_set<abs_type> *b = new std::unordered_set<abs_type>;
-//            valid_joint_input.push_back(b);
-//        }
-        for (int ic=0; ic<comp.no_states; ic++) {
-            for (int ia=1; ia<no_assume_states; ia++) {
-                for (int ig=1; ig<no_guarantee_states; ig++) {
+        for (abs_type ic=0; ic<comp.no_states; ic++) {
+            for (abs_type ia=1; ia<no_assume_states; ia++) {
+                for (abs_type ig=1; ig<no_guarantee_states; ig++) {
                     /* the pre state index for the tuple (ic,ia,ig)*/
                     abs_type im = monitor_state_ind(ic,ia,ig,no_assume_states,no_guarantee_states);
-                    for (int j=0; j<no_control_inputs; j++) {
+                    for (abs_type j=0; j<no_control_inputs; j++) {
                         /* if there is a control strategy, and the current control input is not allowed, then continue with the next one */
                         if ((allowed_control_inputs[im]->size()!=0) &&
                             (allowed_control_inputs[im]->find(j)==allowed_control_inputs[im]->end())) {
                             continue;
                         }
-                        for (int k=0; k<no_dist_inputs; k++) {
+                        for (abs_type k=0; k<no_dist_inputs; k++) {
                             /* if the current joint control input is not allowed, then continue with the next disturbance input */
                             if (allowed_joint_inputs[im]->find(addr_uw(j,k))== allowed_joint_inputs[im]->end()) {
                                 continue;
@@ -234,33 +228,10 @@ public:
                                     break;
                                 }
                             }
-                            // /* the post component states */
-                            // std::vector<abs_type> ic2 = *comp.post[comp.addr(ic,j,k)];
                             /* non-deterministic post assumption states */
                             for (auto ia2=(assume.post_[assume.addr(ia,k)])->begin(); ia2!= (assume.post_[assume.addr(ia,k)])->end(); ++ia2) {
-                                // /* old: the post assumption state (singleton) */
-                                // abs_type ia2;
-                                // if (assume.post_[assume.addr(ia,k)]->size()==0) {
-                                //     continue;
-                                // } else {
-                                //     ia2 = *(assume.post_[assume.addr(ia,k)])->begin();
-                                // }
                                 /* non-deterministic component successor states */
                                 for (auto ic2 = comp.post[comp.addr(ic,j,k)]->begin() ; ic2 != comp.post[comp.addr(ic,j,k)]->end(); ++ic2) {
-                                    // /* old: the post guarantee states (singleton) */
-                                    // abs_type ig2;
-                                    // if ((guarantee.post_[guarantee.addr(ig,comp.state_to_output[*it])])->size()==0) {
-                                    //                    continue;
-                                    // } else {
-                                    //     ig2 = *(guarantee.post_[guarantee.addr(ig,comp.state_to_output[*it])])->begin();
-                                    // }
-                                    // /* super old: the guarantee states are updated using the output labels of the component "pre states" */
-                                    // if ((guarantee.post_[guarantee.addr(ig,comp.state_to_output[ic])])->size()==0) {
-                                    //                    continue;
-                                    // } else {
-                                    //     ig2 = *(guarantee.post_[guarantee.addr(ig,comp.state_to_output[ic])])->begin();
-                                    // }
-
                                     /* if the guarantee automaton reached a deadend, then ignore the current component successor state */
                                     if ((guarantee.post_[guarantee.addr(ig,comp.state_to_output[*ic2])])->size()==0) {
                                         continue;
@@ -274,7 +245,6 @@ public:
                                         }
                                     }
                                     /* if either the assumption or the guarantee hit the bad state, then the monitor goes to one of the sink states and no other transitions are added */
-//                                    if (is_assume_reject && !is_guarantee_reject) {
                                     if (is_assume_reject) {
                                         if (post[addr_xuw(im,j,k)]->find(0) == post[addr_xuw(im,j,k)]->end()) {
                                             pre[addr_xuw(0,j,k)]->insert(im);
@@ -282,7 +252,6 @@ public:
                                             no_post[addr_xuw(im,j,k)]++;
                                         }
                                         continue;
-                                    // } else if (*ig2==0) {
                                     } else if (is_guarantee_reject) {
                                         if (post[addr_xuw(im,j,k)]->find(1) == post[addr_xuw(im,j,k)]->end()) {
                                             pre[addr_xuw(1,j,k)]->insert(im);
@@ -297,14 +266,8 @@ public:
                                         abs_type im2 = monitor_state_ind(*ic2,*ia2,*ig2,no_assume_states,no_guarantee_states);
                                         if (post[addr_xuw(im,j,k)]->find(im2) == post[addr_xuw(im,j,k)]->end()) {
                                             no_post[addr_xuw(im,j,k)]++;
-            //                                valid_input[im]->insert(j);
-            //                                valid_joint_input[im]->insert(addr_uw(j,k));
-                                            // if (*ia2!=0 && *ig2!=0) {
-                                            // if (!is_assume_reject && !is_guarantee_reject) {
                                             pre[addr_xuw(im2,j,k)]->insert(im);
                                             post[addr_xuw(im,j,k)]->insert(im2);
-                                            // } else if (*ia2==0 && *ig2!=0) {
-                                            // }
                                         }
                                     }
                                 }
@@ -540,22 +503,11 @@ public:
         if (monitor_states_were_relabeled) {
             throw std::runtime_error("Monitor::monitor_state_ind: monitor states were relabeled, and this function cannot be used anymore.\n");
         }
-        // /* sanity check */
         /* violation of guarantee has higher priority than the violation of assumption (strong satisfaction of contract) */
         if (ig==0) {
             return 1;
-            // try {
-            //     throw std::domain_error("Monitor:monitor_state_ind: The reject state (with index 0) of the guarantee automaton should be excluded while constructing the product space of the monitor.\n");
-            // } catch (std::exception& e) {
-            //     std::cout << e.what();
-            // }
         } else if (ia==0) {
             return 0;
-            // try {
-            //     throw std::domain_error("Monitor:monitor_state_ind: The reject state (with index 0) of the assumption automaton should be excluded while constructing the product space of the monitor.\n");
-            // } catch (std::exception& e) {
-            //     std::cout << e.what();
-            // }
         } else {
             return (ic*(na-1)*(ng-1) + (ia-1)*(ng-1) + (ig-1) + 2); /* the -1 with ia and ig are to shift all the ia and ig indeces leftwards, since the reject state is not used in the product. the +2 in the end is to make sure that reject states of the monitor 0,1 are indeed reserved. */
         }

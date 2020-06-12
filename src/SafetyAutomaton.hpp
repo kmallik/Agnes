@@ -41,7 +41,7 @@ public:
         init_=other.init_;
         no_inputs_=other.no_inputs_;
         post_ = new std::unordered_set<abs_type>*[no_states_*no_inputs_];
-        for (int i=0; i<no_states_*no_inputs_; i++) {
+        for (abs_type i=0; i<no_states_*no_inputs_; i++) {
             std::unordered_set<abs_type>* p=new std::unordered_set<abs_type>;
             *p=*other.post_[i];
             post_[i]=p;
@@ -79,7 +79,6 @@ public:
     SafetyAutomaton(const negotiation::SafetyAutomaton& A1,
                  const negotiation::SafetyAutomaton& A2) {
         /* the number of states of the product is the product of the number of states of A1 and A2 */
-        // no_states_ = A1.no_states_*A2.no_states_;
         no_states_ = (A1.no_states_-1)*(A2.no_states_-1)+1;
         /* the new state index is derived using the following lambda expression */
         auto new_ind = [&](abs_type i1, abs_type i2) -> abs_type {
@@ -90,7 +89,6 @@ public:
                 /* the indexing starts at 1 (excluding the sink) */
                 return ((i1-1)*(A2.no_states_-1) + (i2-1)) + 1;
             }
-            // return (i1*A2.no_states_ + i2);
         };
         /* a product state is initial if all the corresponding individual states are initial */
         for (auto i1=A1.init_.begin(); i1!=A1.init_.end(); ++i1) {
@@ -120,7 +118,6 @@ public:
         abs_type index = no_inputs_;
         for (abs_type i1=1; i1<A1.no_states_; i1++) {
             for (abs_type i2=1; i2<A2.no_states_; i2++) {
-                abs_type i_new = new_ind(i1,i2);
                 for (abs_type j=0; j<no_inputs_; j++) {
                     std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
                     abs_type p1 = A1.addr(i1,j);
@@ -138,18 +135,13 @@ public:
         addPost(post);
         delete[] post;
     }
-//    /*! Check emptiness.
-//     * \param[out] true/false   empty/non-empty*/
-//    bool isEmpty() {
-//
-//    }
     /*! the equality operator creates new array for post_ */
     SafetyAutomaton& operator=(const SafetyAutomaton& other) {
         no_states_=other.no_states_;
         init_=other.init_;
         no_inputs_=other.no_inputs_;
         post_ = new std::unordered_set<abs_type>*[no_states_*no_inputs_];
-        for (int i=0; i<no_states_*no_inputs_; i++) {
+        for (abs_type i=0; i<no_states_*no_inputs_; i++) {
             std::unordered_set<abs_type>* p=new std::unordered_set<abs_type>;
             *p=*other.post_[i];
             post_[i]=p;
@@ -193,21 +185,13 @@ public:
     /*! Overwrite the post array.
      * \param[in] post      the new post array */
     void addPost(std::unordered_set<abs_type>** post) {
-        // /* first delete the old post array */
-        // resetPost();
         /* now set the new post as the one supplied */
         int no_elems = no_states_*no_inputs_;
         post_ = new std::unordered_set<abs_type>*[no_elems];
         for (int i=0; i<no_elems; i++) {
             std::unordered_set<abs_type>* v=new std::unordered_set<abs_type>;
             post_[i]=v;
-//            /* debug */
-//            cout << "i = " << i << "\n";
-//            /* debug end */
             for (auto it=post[i]->begin(); it!=post[i]->end(); ++it) {
-//                /* debug */
-//                cout << "\t *it = " << *it << "\n";
-//                /* debug end */
                 post_[i]->insert(*it);
             }
         }
@@ -256,7 +240,6 @@ public:
             }
         }
         /* update number of states */
-//        abs_type no_states_old=no_states_;
         no_states_=new_to_old.size();
         /* update the initial state*/
         std::unordered_set<abs_type> init_old=init_;
@@ -302,17 +285,10 @@ public:
         s->insert(0);
         E.push(s);
         E.push(&init_);
-        /* the respective indices of those states */
-        std::queue<abs_type> indices;
-        indices.push(0); /* index of the reject state 0 */
-        indices.push(1); /* index of the set of initial states */
         while (E.size()!=0) {
             /* pop one set from E */
             std::unordered_set<abs_type>* cur_state = E.front();
             E.pop();
-            /* pop the respective state index */
-            abs_type cur_state_id=indices.front();
-            indices.pop();
             for (abs_type j=0; j<no_inputs_; j++) {
                 /* initialize a set of post states of cur_state */
                 std::unordered_set<abs_type>* post = new std::unordered_set<abs_type>;
@@ -352,7 +328,6 @@ public:
                         Q.push_back(post);
                         next_state_id=Q.size()-1;
                         E.push(post);
-                        indices.push(Q.size()-1);
                     }
                     /* add the transition */
                     post_det.push_back(next_state_id);
@@ -365,7 +340,7 @@ public:
         init_.insert(1);
         /* convert post_det to an array */
         std::unordered_set<abs_type>** post_det_arr = new std::unordered_set<abs_type>*[post_det.size()];
-        for (int i=0; i<post_det.size(); i++) {
+        for (size_t i=0; i<post_det.size(); i++) {
             std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
             s->insert(post_det[i]);
             post_det_arr[i]=s;
@@ -376,77 +351,6 @@ public:
 
         delete[] post_det_arr;
     }
-    // /*! Determinize the safety automaton (using the universal accepting condition: the rejecting states are lumped into the one with index 0) */
-    // void determinize() {
-    //     /* new deterministic post vector (will be converted to array later) */
-    //     std::vector<abs_type> post_det;
-    //     /* subsets of sets of states (encoded using decimal) already added, the index of set Q[i] in the deterministic automaton in i */
-    //     std::vector<abs_type> Q;
-    //     /* address of the binary encoding of set q in the vector Q, Q_inv[q]=2^no_states_ means that q is not present in Q at present */
-    //     abs_type* Q_inv = new abs_type[(abs_type)pow(2,no_states_)];
-    //     for (int i=0; i<pow(2,no_states_); i++) {
-    //         Q_inv[i]=pow(2,no_states_);
-    //     }
-    //     /* initially the deterministic automaton has just two states: the reject state and the set of initial states */
-    //     Q.push_back(0);
-    //     Q_inv[0]=0;
-    //     abs_type x0=decEnc(init_);
-    //     Q.push_back(x0);
-    //     Q_inv[x0]=1;
-    //     /* set of subsets of states to be explored for post computation (processed in FIFO fashion) */
-    //     std::queue<std::unordered_set<abs_type>*> E;
-    //     std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
-    //     s->insert(0);
-    //     E.push(s);
-    //     E.push(&init_);
-    //     while (E.size()!=0) {
-    //         /* pop one set from E */
-    //         std::unordered_set<abs_type>* pre = E.front();
-    //         E.pop();
-    //         for (abs_type j=0; j<no_inputs_; j++) {
-    //             /* initialize a set of post states of pre */
-    //             std::unordered_set<abs_type>* post = new std::unordered_set<abs_type>;
-    //             for (auto i=pre->begin(); i!=pre->end(); ++i) {
-    //                 std::unordered_set<abs_type>* post_set=post_[addr(*i,j)];
-    //                 /* flag to check if any successor goes to reject */
-    //                 bool unsafe=false;
-    //                 for (auto k=post_set->begin(); k!=post_set->end(); ++k) {
-    //                     if (*k==0) {
-    //                         post->clear();
-    //                         unsafe=true;
-    //                         break;
-    //                     } else {
-    //                         post->insert(*k);
-    //                     }
-    //                 }
-    //                 if (unsafe) {
-    //                     break;
-    //                 }
-    //             }
-    //             abs_type xx=decEnc(*post);
-    //             if (Q_inv[xx]==pow(2,no_states_)) {
-    //                 /* the set post has not been seen before */
-    //                 Q.push_back(xx);
-    //                 Q_inv[xx]=Q.size()-1;
-    //                 E.push(post);
-    //             }
-    //             /* add the deterministic transition to the state index representing the post set */
-    //             post_det.push_back(Q_inv[xx]);
-    //         }
-    //     }
-    //     /* now update the class member variables */
-    //     no_states_=Q.size();
-    //     init_.clear();
-    //     init_.insert(1);
-    //     delete[] post_;
-    //     post_ = new std::unordered_set<abs_type>*[post_det.size()];
-    //     for (int i=0; i<post_det.size(); i++) {
-    //         std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
-    //         s->insert(post_det[i]);
-    //         post_[i]=s;
-    //     }
-    // }
-
     /*! (Over-)write the safety automaton to a file */
     void writeToFile(const string& filename) {
         create(filename);
@@ -531,7 +435,7 @@ public:
             state_labels.push_back(s);
         }
         /* write the graph */
-        int flag=createDiGraph<abs_type>(filename, graph_name, state_labels, init_, edge_labels, post_new);
+        createDiGraph<abs_type>(filename, graph_name, state_labels, init_, edge_labels, post_new);
     }
 private:
     /* intersect two sets */

@@ -27,10 +27,6 @@ public:
     std::unordered_set<abs_type> monitor_target_states_;
     /*! Obstacle states for the liveness/reachability specification */
     std::unordered_set<abs_type> monitor_avoid_states_;
-    // /*! Allowed control inputs */
-    // std::vector<std::unordered_set<abs_type>*> allowed_inputs_;
-//    /*! constuctor: see <Monitor> **/
-//    using Monitor::Monitor;
     /*! constructor
      *
      * \param[in] comp          the component
@@ -41,8 +37,12 @@ public:
      * \param[in] allowed_joint_inputs      vector of allowed joint action inputs indexed using the monitor state indices
 
      * NOTE: allowed_joint_inputs[i] has any effect only when allowed_control_inputs[i] is empty. */
-    LivenessGame(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee, const std::unordered_set<abs_type> component_target_states, std::vector<std::unordered_set<abs_type>*> allowed_control_inputs,
-    std::vector<std::unordered_set<abs_type>*> allowed_joint_inputs) : Monitor(comp, assume, guarantee, allowed_control_inputs, allowed_joint_inputs) {
+    LivenessGame(Component& comp,
+                 SafetyAutomaton& assume,
+                 SafetyAutomaton& guarantee,
+                 const std::unordered_set<abs_type> component_target_states,
+                 std::vector<std::unordered_set<abs_type>*> allowed_control_inputs,
+                 std::vector<std::unordered_set<abs_type>*> allowed_joint_inputs) : Monitor(comp, assume, guarantee, allowed_control_inputs, allowed_joint_inputs) {
         /* target states */
         /* the assumption violation is always in target */
         monitor_target_states_.insert(0);
@@ -57,22 +57,6 @@ public:
         }
         /* avoid state: the guarantee violation */
         monitor_avoid_states_.insert(1);
-        // /* allowed inputs */
-        // for (abs_type im=0; im<no_states; im++) {
-        //     std::unordered_set<abs_type>* s=new std::unordered_set<abs_type>;
-        //     /* for the sink, all inputs are allowed, and for the other states, the allowed inputs are derived from the allowed inputs for the respective component state */
-        //     if (im==0 || im==1) {
-        //         for (abs_type j=0; j<no_control_inputs; j++) {
-        //             s->insert(j);
-        //         }
-        //     } else {
-        //         abs_type ic=component_state_ind(im);
-        //         for (auto l=allowed_inputs[ic]->begin(); l!=allowed_inputs[ic]->end(); ++l) {
-        //             s->insert(*l);
-        //         }
-        //     }
-        //     allowed_inputs_.push_back(s);
-        // }
     }
     /*! constructor
      *
@@ -235,10 +219,6 @@ public:
                                 K[addr_xu(*it,j)]--;
                             }
                             M[addr_xu(*it,j)] = (M[addr_xu(*it,j)]>=1+V[x] ? M[addr_xu(*it,j)] : 1+V[x]);
-                            /* debug */
-                            writeVec("Outputs/interim_processed_posts.txt","PROCESSED_POSTS",K,"w");
-                            writeVec("Outputs/max_value.txt","MAX_VALUE",M,"w");
-                            /* debug ends */
                             if (!K[addr_xu(*it,j)] && V[*it]>M[addr_xu(*it,j)]) {
                                 Q.push(*it);
                                 V[*it]=M[addr_xu(*it,j)];
@@ -274,9 +254,6 @@ public:
                 std::cout << e.what() << "\n";
             }
         }
-//        initialize(component_target_states);
-        /* a very high number used as value of losing states */
-        abs_type losing = std::numeric_limits<abs_type>::max();
         /* the outer nu variable */
         std::unordered_set<abs_type> YY, YY_old;
         for (abs_type i=0; i<no_states; i++) {
@@ -406,8 +383,6 @@ public:
                 *live_win[i]=*reach_win[i];
             }
         }
-        // /* experimental counter part */
-        // monitor_target_states_.insert(0);
         return live_win;
     }
     /*! compute the set of spoiling behaviors in the form of a safety automaton.
@@ -415,14 +390,8 @@ public:
      * \param[out] out_flag        0 -> some initial states are sure losing, 2 -> all initial states are sure winning, 1-> otherwise. */
     int find_spoilers(negotiation::SafetyAutomaton* spoilers) {
         int out_flag;
-//        /* create the spoiler safety automaton */
-//        negotiation::SafetyAutomaton spoilers;
         /* solve the liveness game with sure semantics */
         std::vector<unordered_set<abs_type>*> sure_win = solve_liveness_game("sure");
-//        /* debugging */
-//        writeToFile("Outputs/monitor_live.txt");
-//        writeVecSet("Outputs/sure_live.txt","SURE_LIVE",sure_win,"w");
-//        /* end of debugging */
         /* if all the initial states are sure winning, then the set of spoiling behaviors is empty */
         bool allInitSureWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
@@ -438,17 +407,12 @@ public:
             out_flag=2;
             return out_flag;
         }
-        /* experimental: to avoid direct help from falsifying the assumption */
+        /* assumption violation is removed from target to avoid direct help from falsifying the assumption */
         monitor_target_states_.erase(0);
-        /* experimental ends */
         /* solve the liveness game with maybe semantics */
         std::vector<unordered_set<abs_type>*> maybe_win_without_assumption_violation = solve_liveness_game("maybe");
-        /* experimental: restoration */
+        /* restore assumption violation as target state for future solution of sure winning */
         monitor_target_states_.insert(0);
-        /* experimental ends */
-//        /* debugging */
-//        writeVecSet("Outputs/maybe_live.txt","MAYBE_LIVE",maybe_win_without_assumption_violation,"w");
-//        /* end of debugging */
         /* if not all the initial states are maybe winning, then no negotiation is possible: return false */
         bool allInitMaybeWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
@@ -485,13 +449,10 @@ public:
         /* a vector containing the bad inputs for each state index */
         std::vector<std::unordered_set<abs_type>*> bad_pairs;
         /* compute unsafe pairs as a vector of the same size as the number of states, where the element with index i points to the set of bad disturbance inputs for state i */
-        /* experimental: it is okay to have successors going to state 0 while computing bad pairs */
+        /* it is okay to have successors going to state 0 while computing bad pairs */
         std::unordered_set<abs_type> W_with_0=W;
         W_with_0.insert(0);
         std::vector<std::unordered_set<abs_type>*> unsafe_pairs=find_bad_pairs(W,W_with_0);
-        /* before experimental */
-        // std::vector<std::unordered_set<abs_type>*> unsafe_pairs=find_bad_pairs(W,W);
-        /* experimental ends here */
         /* update the bad pairs */
         for (abs_type i=0; i<no_states; i++) {
             std::unordered_set<abs_type>* set=new std::unordered_set<abs_type>;
@@ -500,16 +461,13 @@ public:
             }
             bad_pairs.push_back(set);
         }
-//        /* debug */
-//        writeVecSet("Outputs/interim_bad_pairs.txt","INTERIM_BAD_PAIRS",bad_pairs,"w");
-//        /* debug end */
         /* update the transition system by removing all the successors of the elements in bad_pairs */
         for (abs_type i=0; i<no_states; i++) {
             for (auto k=bad_pairs[i]->begin(); k!=bad_pairs[i]->end(); ++k) {
                 for (abs_type j=0; j<no_control_inputs; j++) {
                     abs_type addr_post = addr_xuw(i,j,*k);
                     for (auto i2=post[addr_post]->begin(); i2!=post[addr_post]->end(); ++i2) {
-                        pre[*i2,j,*k]->erase(i);
+                        pre[addr_xuw(*i2,j,*k)]->erase(i);
                     }
                     post[addr_post]->clear();
                     no_post[addr_post]=0;
@@ -535,66 +493,27 @@ public:
                 monitor_target_states_.erase(*im);
             }
         }
-        // /* experimental: to avoid direct help from falsifying the assumption */
-        // monitor_target_states_.erase(0);
-        // /* solve the liveness game with maybe semantics */
-        // maybe_win = solve_liveness_game("maybe");
-        // /* remove those inputs from W which were asking for violation of assumption */
-        // for (abs_type i=0; i<no_states; i++) {
-        //     if (maybe_win[i]->size()==0) {
-        //         W.erase(i);
-        //     }
-        // }
-        // monitor_target_states_.insert(0);
-        // /* experimental ends here */
         /* initialize set of states for iteratively computing the LiveLockPairs */
         std::unordered_set<abs_type> T_cur, T_old;
         for (auto i=monitor_target_states_.begin(); i!=monitor_target_states_.end(); ++i) {
             T_cur.insert(*i);
         }
-        // /* experimental: do not try to reach the assumption violation */
-        // T_cur.erase(0);
-        /* experimental ends */
         /* initialize live_lock_pairs */
         std::vector<std::unordered_set<abs_type>*> live_lock_pairs;
         for (abs_type i=0; i<no_states; i++) {
             std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
             live_lock_pairs.push_back(set);
         }
-        /* repeat until convergence*/
-        while (T_old!=T_cur) {
+        /* repeat until convergence and when no new live lock pairs could be found in the last iteration*/
+        bool live_lock_pair_updated=false;
+        while (T_old!=T_cur || live_lock_pair_updated) {
+            live_lock_pair_updated=false;
             /* save the current targets */
             T_old=T_cur;
-//            /* if all the current target states are in the all reachable maybe winning states, then terminate the loop */
-//            bool all_maybe_winning_covered=true;
-//            for (auto i=W.begin(); i!=W.end(); ++i) {
-//                // /* experimental */
-//                // if (*i==0) {
-//                //     continue;
-//                // }
-//                // /* experimental ends here */
-//                if (T_cur.find(*i)==T_cur.end()) {
-//                    all_maybe_winning_covered=false;
-//                    break;
-//                }
-//            }
-//            if (all_maybe_winning_covered) {
-//                break;
-//            }
             /* update the monitor target states */
             monitor_target_states_=T_cur;
-            // /* experimental */
-            // monitor_target_states_.insert(0);
-            // /* experimental ends */
             /* solve sure reachability game */
             sure_win=solve_reach_avoid_game("sure");
-//            /* debug */
-//            writeVecSet("Outputs/interim_sure_win.txt","INTERIM_SURE_WIN",sure_win,"w");
-//            writeToFile("Outputs/monitor.txt");
-//            /* debug end */
-            // /* experimental cleanup */
-            // monitor_target_states_.erase(0);
-            // /* experimental cleanup */
             /* add back the deleted transitions for those livelock pairs for which the respective states are still not sure winning */
             for (abs_type i=0; i<no_states; i++) {
                 if (live_lock_pairs[i]->size()!=0 &&
@@ -661,19 +580,17 @@ public:
                     T_cur_cmp.insert(i);
                 }
             }
-            /* experimental: it is okay for a successor state to go to 0 while computing live lock pairs */
+            /* it is okay for a successor state to go to 0 while computing live lock pairs */
             std::unordered_set<abs_type> T_cur_with_0=T_cur;
             T_cur_with_0.insert(0);
             T_cur_cmp.erase(0);
             /* update LiveLockPairs */
             std::vector<std::unordered_set<abs_type>*> live_lock_pairs_new=find_bad_pairs(T_cur_cmp,T_cur_with_0);
-            /* before experimental */
-            // std::vector<std::unordered_set<abs_type>*> live_lock_pairs=find_bad_pairs(T_cur_cmp,T_cur);
-            /* experimental ends here */
             /* update the live_lock_pairs with the newly founded ones */
             for (abs_type i=0; i<no_states; i++) {
                 for (auto k=live_lock_pairs_new[i]->begin(); k!=live_lock_pairs_new[i]->end(); ++k) {
                     live_lock_pairs[i]->insert(*k);
+                    live_lock_pair_updated=true;
                 }
             }
             /* update post (remove all the transitions caused due to elements in live_lock_pairs) */
@@ -690,9 +607,6 @@ public:
                     }
                 }
             }
-//            /* debug */
-//            writeVecSet("Outputs/live_lock_pairs.txt","LIVE_LOCK_PAIRS",live_lock_pairs,"w");
-//            /* debug end */
         }
         /* if the initial states could not be added to the sure winning region, then return 0: no negotiation is possible */
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
@@ -706,54 +620,24 @@ public:
                 bad_pairs[i]->insert(*k);
             }
         }
-        // /* experimental restoration */
-        // monitor_target_states_.insert(0);
-        // /* experimental ends here */
-        // /* experimental: for sure losing states (computed by inverting the maybe winning states with 0 not assigned as target), remove the bad pairs entries */
-        // for (abs_type i=0; i<no_states; i++) {
-        //     if (W.find(i)==W.end()) {
-        //         bad_pairs[i]->clear();
-        //     }
-        // }
-        // /* also remove the bad pairs which lead to the 0 state */
-        // for (abs_type j=0; j<no_control_inputs; j++) {
-        //     for (abs_type k=0; k<no_dist_inputs; k++) {
-        //         for (auto i=pre[addr_xuw(0,j,k)]->begin(); i!=pre[addr_xuw(0,j,k)]->end(); ++i) {
-        //             bad_pairs[*i]->erase(k);
-        //         }
-        //     }
-        // }
-        // /* experimental ends here */
-//        /* debug */
-//        writeVecSet("Outputs/interim_bad_pairs.txt","INTERIM_BAD_PAIRS",bad_pairs,"w");
-//        /* debug end */
         /* find the reachable states using the updated post */
         R = compute_reachable_set();
 
         /* construct the spoilers safety automaton */
         /* map from new state indices to old state indices: all the losing states (i.e. no maybe winning) are lumped in state 0 */
         std::vector<abs_type> old_state_ind;
-//        /* count new states */
-//        int no_new_states=0;
         /* the old "reject_G" state is mapped to index 0 */
         old_state_ind.push_back(1);
-//        no_new_states++;
         /* the old "reject_A" state is mapped to index 1 */
-//        old_state_ind.push_back(0);
-//        no_new_states++;
         /* for the rest of the reachable monitor states, a new state index is created, and all the losing and unreachable monitor states are mapped to state 0 */
         for (abs_type i=2; i<no_states; i++) {
             if (R.find(i)!=R.end()) {
                 old_state_ind.push_back(i);
-//                no_new_states++;
-            } //else {
-//                old_state_ind.push_back(0);
-//            }
+            }
         }
         /* construct the full safety automaton capturing the set of spoiling behaviors */
         abs_type no_new_states=old_state_ind.size();
         spoilers->no_states_=no_new_states;
-//        spoilers.init_=init_; /* CHECK THIS: ALSO IN SAFETY */
         for (abs_type i=0; i<no_new_states; i++) {
             abs_type q=old_state_ind[i];
             if (init_.find(q)!=init_.end()) {
@@ -790,9 +674,6 @@ public:
             }
         }
         spoilers->addPost(p);
-//       /* debug */
-//       spoilers->writeToFile("Outputs/interim_liveness_spoiler.txt");
-//       /* debug end */
         /* restore post, no_post, monitor_target_states_*/
         monitor_target_states_=monitor_target_states_old;
         for (abs_type l=0; l<no_states*no_control_inputs*no_dist_inputs; l++) {

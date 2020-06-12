@@ -43,11 +43,11 @@ int createDiGraph(const std::string& filename,
     /* the object being created is a digraph */
     file << "digraph " << graph_name << " {"<< "\n";
     /* write all the transitions */
-    for (int i=0; i<vertex_labels.size(); i++) {
-        for (int j=0; j<edge_labels.size(); j++) {
+    for (size_t i=0; i<vertex_labels.size(); i++) {
+        for (size_t j=0; j<edge_labels.size(); j++) {
             std::unordered_set<T> post_state=*transitions[post_addr(i,j)];
             for (auto i2=post_state.begin(); i2!=post_state.end(); ++i2) {
-                file << "\t " << *vertex_labels[i] << " -> " << *vertex_labels[*i2] << " [label=\"" << *edge_labels[j] << "\"]\;" << "\n";
+                file << "\t " << *vertex_labels[i] << " -> " << *vertex_labels[*i2] << " [label=\"" << *edge_labels[j] << "\"];" << "\n";
             }
         }
     }
@@ -116,32 +116,36 @@ int createDiGraph(const std::string& filename,
     int num_clusters=0;
     for (auto c=vertex_clusters.begin(); c!=vertex_clusters.end(); ++c) {
         file << "\tsubgraph cluster" << num_clusters << " \{\n";
-        file << "\t\tnode [style=filled]\;\n";
+        file << "\t\tnode [style=filled];\n";
         for (auto i=(*c)->begin(); i!=(*c)->end(); ++i) {
             /* bookkeeping */
             vertices_in_clusters.insert(*i);
             /* add outgoing transitions for the current vertex */
-            for (int j=0; j<edge_labels.size(); j++) {
+            for (size_t j=0; j<edge_labels.size(); j++) {
                 std::unordered_set<T> post_state=*transitions[post_addr(*i,j)];
                 for (auto i2=post_state.begin(); i2!=post_state.end(); ++i2) {
-                    file << "\t\t " << *vertex_labels[*i] << " -> " << *vertex_labels[*i2] << " [label=\"" << *edge_labels[j] << "\"]\;" << "\n";
+                    file << "\t\t " << *vertex_labels[*i] << " -> " << *vertex_labels[*i2] << " [label=\"" << *edge_labels[j] << "\"];" << "\n";
                 }
             }
         }
-        file << "\t\}\n";
+        file << "\t}\n";
         num_clusters++;
     }
     /* write all the transitions for states not appearing in clusters */
-    for (int i=0; i<vertex_labels.size(); i++) {
+    for (size_t i=0; i<vertex_labels.size(); i++) {
         if (vertices_in_clusters.find(i)!=vertices_in_clusters.end()) {
             continue;
         }
-        for (int j=0; j<edge_labels.size(); j++) {
+        for (size_t j=0; j<edge_labels.size(); j++) {
             std::unordered_set<T> post_state=*transitions[post_addr(i,j)];
             for (auto i2=post_state.begin(); i2!=post_state.end(); ++i2) {
-                file << "\t " << *vertex_labels[i] << " -> " << *vertex_labels[*i2] << " [label=\"" << *edge_labels[j] << "\"]\;" << "\n";
+                file << "\t " << *vertex_labels[i] << " -> " << *vertex_labels[*i2] << " [label=\"" << *edge_labels[j] << "\"];" << "\n";
             }
         }
+    }
+    /* the initial vertices appear as diamond shaped */
+    for (auto i=init_vertices.begin(); i!=init_vertices.end(); ++i) {
+        file << "\t" << *i << " [shape=diamond]" << "\n";
     }
     file << "}";
     file.close();

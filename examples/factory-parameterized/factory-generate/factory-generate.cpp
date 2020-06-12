@@ -15,9 +15,9 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define plant_process_cycles_ 1
- #define plant_hibernate_cycle_ 1
- #define feeder_max_wait_cycles_ 3
+ #define plant_process_cycles_ 3
+ #define plant_hibernate_cycle_ 3
+ #define feeder_max_wait_cycles_ 7
 
 using namespace std;
 using namespace negotiation;
@@ -413,6 +413,17 @@ int main() {
     Length = Str_copy.copy(char_copy, Str_copy.length() + 1);
     char_copy[Length] = '\0';
     system(char_copy);
+    /* create a output folder */
+    std::string Str_output_folder = Str_folder;
+    Str_output_folder += "Outputs";
+    Length = Str_output_folder.copy(char_copy, Str_output_folder.length() + 1);
+    char_copy[Length] = '\0';
+    checkMakeDir(char_copy);
+//    Str_copy = "cp files/visualize.sh ";
+//    Str_copy += Str_output_folder;
+//    Length = Str_copy.copy(char_copy, Str_copy.length() + 1);
+//    char_copy[Length] = '\0';
+//    system(char_copy);
 
     delete[] post_feeder;
     delete[] post_plant;

@@ -10,9 +10,19 @@
  */
 
 #include <array>
+#include <stdio.h>
 #include <iostream>
 #include <cmath>
 #include <unordered_set>
+/* for getting the current directory name */
+#ifdef WINDOWS
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h>
+#define GetCurrentDir getcwd
+#endif
+
 
 #include "Component.hpp"
 #include "SafetyAutomaton.hpp"
@@ -21,14 +31,18 @@
 #include "SafetyGame.hpp"
 #include "Spoilers.hpp"
 #include "Negotiate.hpp"
+#include "TicToc.hpp"
 #define _USE_MATH_DEFINES
 
 using namespace std;
+using namespace negotiation;
 
 /****************************************************************************/
 /* main computation */
 /****************************************************************************/
 int main() {
+    /* maximum depth of negotiation */
+    int k_max = 25;
 
     std::vector<std::string*> component_files, safe_states_files, target_states_files;
     std::string* c1= new std::string("Inputs/feeder.txt");
@@ -46,42 +60,120 @@ int main() {
     target_states_files.push_back(t1);
     target_states_files.push_back(t2);
 
-    // int max_depth=4;
-    // negotiation::Negotiate N(component_files, safe_states_files, target_states_files, max_depth);
+    negotiation::Negotiate N(component_files, safe_states_files, target_states_files, k_max);
 
-    negotiation::Negotiate N(component_files, safe_states_files, target_states_files);
+//    /* save the transition systems in DOT language */
+//    for (int p=0; p<2; p++) {
+//        std::vector<std::string*> state_labels;
+//        abs_type no_state_clusters;
+//        std::vector<std::unordered_set<abs_type>*> state_clusters;
+//        std::string file_ip="Inputs/pr_";
+//        file_ip+=std::to_string(p);
+//        file_ip+=".txt";
+//        readVec<std::string>(file_ip, state_labels, (size_t)N.components_[p]->no_states, "STATE_LABELS");
+//        readMember<abs_type>(file_ip, no_state_clusters, "NO_CLUSTERS");
+//        readVecSet<abs_type>(file_ip, state_clusters, no_state_clusters, "STATE_CLUSTERS");
+//        std::vector<std::string*> control_input_labels, dist_input_labels;
+//        std::string* str=new std::string;
+//        *str="wr";
+//        *str+=std::to_string(p);
+//        control_input_labels.push_back(str);
+//        str=new std::string;
+//        *str="nop";
+//        *str+=std::to_string(p);
+//        control_input_labels.push_back(str);
+//        str=new string;
+//        *str="wr";
+//        *str+=std::to_string(1-p);
+//        dist_input_labels.push_back(str);
+//        str=new string;
+//        *str="nop";
+//        *str+=std::to_string(1-p);
+//        dist_input_labels.push_back(str);
+//        std::string file_op="Outputs/pr_";
+//        file_op+=std::to_string(p);
+//        file_op+=".gv";
+//        std::string graph_name="Process_";
+//        graph_name+=std::to_string(p);
+//        N.components_[p]->createDOT(file_op, graph_name, state_labels, state_clusters, control_input_labels, dist_input_labels);
+//        /* save the contract */
+//        file_op="Outputs/guarantee_";
+//        file_op+=std::to_string(p);
+//        file_op+=".gv";
+//        graph_name="Guarantee_";
+//        graph_name+=std::to_string(p);
+//        N.guarantee_[p]->createDOT(file_op, graph_name, dist_input_labels);
+//    }
 
-    N.iterative_deepening_search();
+    TicToc timer;
+    /* perform the negotiation */
+    timer.tic();
+    int k=N.iterative_deepening_search();
+    double elapsed_time=timer.toc();
 
     checkMakeDir("Outputs");
     N.guarantee_[0]->writeToFile("Outputs/guarantee_feeder.txt");
     N.guarantee_[1]->writeToFile("Outputs/guarantee_plant.txt");
 
-//    /* testing of the safety part */
-//    negotiation::Component c1("Inputs/C1.txt");
-//    negotiation::SafetyAutomaton assume(2);
-//    negotiation::SafetyAutomaton guarantee(2);
-//    negotiation::SafetyGame monitor(c1,assume,guarantee);
-//
-//    /* the safety game */
-//    std::unordered_set<negotiation::abs_type> safe_states = {0,1,2,3,4};
-//    std::vector<std::unordered_set<negotiation::abs_type>*> sure_win=monitor.solve_safety_game(safe_states,"sure");
-//    std::vector<std::unordered_set<negotiation::abs_type>*> maybe_win=monitor.solve_safety_game(safe_states,"maybe");
-//
-//    negotiation::SafetyAutomaton* spoiler_full = new negotiation::SafetyAutomaton;
-//    monitor.find_spoilers(sure_win, maybe_win, spoiler_full);
-//    checkMakeDir("Outputs");
-//    spoiler_full->writeToFile("Outputs/spoilers.txt");
-//
-//    spoiler_full->determinize();
-//    spoiler_full->writeToFile("Outputs/spoilers_det.txt");
-//
-//    negotiation::Spoilers spoilers(spoiler_full);
-//    spoilers.boundedBisim(0);
-//    spoilers.spoilers_mini_->writeToFile("Outputs/spoilers_mini.txt");
-//
-//    spoilers.spoilers_mini_->determinize();
-//    spoilers.spoilers_mini_->writeToFile("Outputs/spoilers_mini_det.txt");
+//    /* save the contracts in DOT language */
+//    for (int p=0; p<2; p++) {
+//        std::vector<std::string*> output_labels;
+//        std::string* str=new std::string;
+//        *str="wr";
+//        *str+=std::to_string(p);
+//        output_labels.push_back(str);
+//        str=new std::string;
+//        *str="nop";
+//        *str+=std::to_string(p);
+//        output_labels.push_back(str);
+//        /* save the contract */
+//        std::string file_op="Outputs/guarantee_";
+//        file_op+=std::to_string(p);
+//        file_op+=".gv";
+//        std::string graph_name="Guarantee_";
+//        graph_name+=std::to_string(p);
+//        N.guarantee_[p]->createDOT(file_op, graph_name, output_labels);
+//    }
+    
+    /* get the current directory name */
+    char buff[FILENAME_MAX]; //create string buffer to hold path
+    GetCurrentDir( buff, FILENAME_MAX );
+    std::string current_working_dir(buff);
+    /* get the parameters of this example (the substring following "factory_") */
+    char substr[10]="factory_";
+    char params[20];
+    for (int i=0; buff[i]!='\0'; i++) {
+        int j=0;
+        if (buff[i]==substr[j]) {
+            int temp=i+1;
+            while(buff[i]==substr[j])
+            {
+                i++;
+                j++;
+            }
+            if(substr[j]=='\0')
+            {
+                for (int k=0; buff[i]!='\0'; i++, k++) {
+                     params[k]=buff[i];
+                }
+            }
+            else
+            {
+                i=temp;
+            }
+        }
+    }
+    /* save results to the log file */
+    char file_name[20]="../results.log";
+    FILE* logfile=fopen(file_name, "a");
+    if (logfile!=NULL) {
+        if (k>k_max) {
+            fprintf(logfile, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\tFAILURE\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k_max, elapsed_time);
+        } else {
+            fprintf(logfile, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec \tSUCCESS\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k, elapsed_time);
+        }
+        
+    }
 
     return 1;
 }

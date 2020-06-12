@@ -10,9 +10,19 @@
  */
 
 #include <array>
+#include <stdio.h>
 #include <iostream>
 #include <cmath>
 #include <unordered_set>
+/* for getting the current directory name */
+#ifdef WINDOWS
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h>
+#define GetCurrentDir getcwd
+#endif
+
 
 #include "Component.hpp"
 #include "SafetyAutomaton.hpp"
@@ -98,8 +108,8 @@ int main() {
     TicToc timer;
     /* perform the negotiation */
     timer.tic();
-    N.iterative_deepening_search();
-    timer.toc();
+    int k=N.iterative_deepening_search();
+    double elapsed_time=timer.toc();
 
     checkMakeDir("Outputs");
     N.guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
@@ -123,6 +133,46 @@ int main() {
         std::string graph_name="Guarantee_";
         graph_name+=std::to_string(p);
         N.guarantee_[p]->createDOT(file_op, graph_name, output_labels);
+    }
+    
+    /* get the current directory name */
+    char buff[FILENAME_MAX]; //create string buffer to hold path
+    GetCurrentDir( buff, FILENAME_MAX );
+    std::string current_working_dir(buff);
+    /* get the parameters of this example (the substring following "mutex_") */
+    char substr[10]="mutex_";
+    char params[20];
+    for (int i=0; buff[i]!='\0'; i++) {
+        int j=0;
+        if (buff[i]==substr[j]) {
+            int temp=i+1;
+            while(buff[i]==substr[j])
+            {
+                i++;
+                j++;
+            }
+            if(substr[j]=='\0')
+            {
+                for (int k=0; buff[i]!='\0'; i++, k++) {
+                     params[k]=buff[i];
+                }
+            }
+            else
+            {
+                i=temp;
+            }
+        }
+    }
+    /* save results to the log file */
+    char file_name[20]="../results.log";
+    FILE* logfile=fopen(file_name, "a");
+    if (logfile!=NULL) {
+        if (k>k_max) {
+            fprintf(logfile, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\tFAILURE\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k_max, elapsed_time);
+        } else {
+            fprintf(logfile, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec \tSUCCESS\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k, elapsed_time);
+        }
+        
     }
 
     return 1;

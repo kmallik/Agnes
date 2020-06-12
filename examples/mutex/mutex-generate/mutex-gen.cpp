@@ -15,12 +15,13 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define pr1_deadline_ 10
- #define pr2_deadline_ 5
+ #define pr1_data_size_ 4
  #define pr1_max_period_ 3
- #define pr2_max_period_ 1
- #define pr1_data_size_ 3
+ #define pr1_deadline_ 10
+
  #define pr2_data_size_ 1
+ #define pr2_max_period_ 1
+ #define pr2_deadline_ 5
 
 using namespace std;
 using namespace negotiation;
@@ -245,9 +246,11 @@ int main() {
                     /* state "write" */
                     x = state_id(1,j,k,l);
                     post[post_addr(x,0,0)]->push_back(state_id(2,j,k-1,l_updated));
-                    post[post_addr(x,0,1)]->push_back(state_id(3,j,k-1,l_updated));
+//                    post[post_addr(x,0,1)]->push_back(state_id(3,j,k-1,l_updated)); // to success
+                    post[post_addr(x,0,1)]->push_back(state_id(1,j-1,k-1,mp[pid]-1)); // skip success state
                     post[post_addr(x,1,0)]->push_back(state_id(2,j,k-1,l_updated));
-                    post[post_addr(x,1,1)]->push_back(state_id(3,j,k-1,l_updated));
+//                    post[post_addr(x,1,1)]->push_back(state_id(3,j,k-1,l_updated)); // to success
+                    post[post_addr(x,1,1)]->push_back(state_id(0,j-1,k-1,mp[pid]-1));
                     /* state "conflict" */
                     x = state_id(2,j,k,l);
                     post[post_addr(x,0,0)]->push_back(state_id(1,j,k-1,l_updated));

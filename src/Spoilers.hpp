@@ -88,17 +88,7 @@ public:
                     for (auto it=spoilers_full_->post_[spoilers_full_->addr(i,j)]->begin(); it!=spoilers_full_->post_[spoilers_full_->addr(i,j)]->end(); ++it) {
                         /* iterate over all the inverse quotients of the concrete post state */
                         for (auto ql=inv_quotient_[*it]->begin(); ql!=inv_quotient_[*it]->end(); ++ql) {
-                            // /* check if the current abstract ql state is already added as j-post of qi */
-                            // bool already_added=false;
-                            // for (auto it2=post[spoilers_mini_->addr(*qi,j)]->begin(); it2!=post[spoilers_mini_->addr(*qi,j)]->end(); ++it2) {
-                            //     if (*it2==*ql) {
-                            //         already_added=true;
-                            //         break;
-                            //     }
-                            // }
-                            // if (!already_added) {
-                                post[spoilers_mini_->addr(*qi,j)]->insert(*ql);
-                            // }
+                            post[spoilers_mini_->addr(*qi,j)]->insert(*ql);
                         }
                     }
                 }
@@ -106,7 +96,6 @@ public:
 
         }
         /* reset transitions of spoilers_mini_ */
-//        spoilers_mini_->resetPost();
         spoilers_mini_->addPost(post);
         delete[] post;
     }
@@ -244,6 +233,9 @@ public:
         }
         spoilers_mini_->resetPost();
         computeMiniTransitions();
+//        /* TESTING: BOUNDED BISIM TURNED OFF */
+//        spoilers_mini_=spoilers_full_;
+//        /* END TESTING  */
     }
 }; /* end of class definition */
 } /* end of namespace negotiation */

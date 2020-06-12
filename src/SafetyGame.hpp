@@ -21,8 +21,6 @@ using namespace std;
  */
 class SafetyGame: public Monitor {
 public:
-//    /*! constuctor: see <Monitor> **/
-//    using Monitor::Monitor;
     SafetyGame(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee) : Monitor(comp, assume, guarantee) {}
     /*! Solve safety game.
      *  The algorithm is taken from: https://gitlab.lrz.de/matthias/SCOTSv0.2/raw/master/manual/manual.pdf
@@ -51,39 +49,19 @@ public:
                 monitor_safe_states.insert(im);
             }
         }
-        /* experimental: avoid direct help by assumption violation in maybe mode */
+        /* avoid direct help by assumption violation in maybe mode */
         if (!strcmp(str,"sure")) {
             monitor_safe_states.insert(0); /* the state 0 is safe for sure winning */
         }
-        /* before experimental */
-//        monitor_safe_states.insert(0); /* the state 0 is always safe */
-        /* experimental ends */
         std::queue<abs_type> Q; /* FIFO queue of bad states */
         std::unordered_set<abs_type> E; /* bad states */
         std::vector<std::unordered_set<abs_type>*> D; /* set of valid inputs indexed by the monitor state indices */
-        for (int i=0; i<no_states; i++) {
+        for (abs_type i=0; i<no_states; i++) {
             std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
             D.push_back(s);
         }
-//        /* state index 0 is safe but 1 is unsafe */
-//        Q.push(1);
-//        E.insert(1);
-//        if (!strcmp(str,"sure")) {
-//            /* for sure winning, D[i] only contains the winning control inputs from state i */
-//            for (abs_type i=0; i<no_control_inputs; i++) {
-//                D[0]->insert(i);
-//            }
-//        } else {
-//            /* for maybe winning, D[i] contains the input indices from the joint control-internal disturbance input space */
-//            for (abs_type j=0; j<no_control_inputs; j++) {
-//                for (abs_type k=0; k<no_dist_inputs; k++) {
-//                    D[0]->insert(addr_uw(j,k));
-//                }
-//            }
-//        }
-
         /* initialize Q, E, D for all the states */
-        for (int i=0; i<no_states; i++) {
+        for (abs_type i=0; i<no_states; i++) {
             if (!isMember<abs_type>(monitor_safe_states,i) || isDeadEnd(i)) {
                 Q.push(i);
                 E.insert(i);
@@ -114,8 +92,8 @@ public:
         while (Q.size()!=0) {
             abs_type x = Q.front();
             Q.pop();
-            for (int j=0; j<no_control_inputs; j++) {
-                for (int k=0; k<no_dist_inputs; k++) {
+            for (abs_type j=0; j<no_control_inputs; j++) {
+                for (abs_type k=0; k<no_dist_inputs; k++) {
                     abs_type x2 = addr_xuw(x,j,k);
                     for (auto it=pre[x2]->begin(); it!=pre[x2]->end(); ++it) {
                         if (!strcmp(str,"sure")) {
@@ -148,8 +126,6 @@ public:
     int find_spoilers(const std::vector<std::unordered_set<negotiation::abs_type>*>& sure_win, const std::vector<std::unordered_set<negotiation::abs_type>*>& maybe_win, negotiation::SafetyAutomaton* spoilers) {
         /* the output flag */
         int out_flag;
-//        /* cretae the spoiler safety automaton */
-//        negotiation::SafetyAutomaton spoilers;
         /* if all the initial states are sure winning, then the set of spoiling behaviors is empty */
         bool allInitSureWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
@@ -203,7 +179,6 @@ public:
         }
         /* construct the full safety automaton capturing the set of spoiling behaviors */
         spoilers->no_states_=no_new_states;
-//        spoilers.init_=init_;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
             spoilers->init_.insert(new_state_ind[*i]);
         }
@@ -245,7 +220,7 @@ public:
             }
         }
         /* for the rest, use the pre */
-        for (int i=1; i<no_states; i++) {
+        for (abs_type i=1; i<no_states; i++) {
             for (abs_type j=0; j<no_control_inputs; j++) {
                 for (abs_type k=0; k<no_dist_inputs; k++) {
                     std::unordered_set<abs_type> p=*pre[addr_xuw(i,j,k)];
@@ -324,10 +299,6 @@ public:
             }
         }
         spoilers->addPost(arr2);
-        // debug
-       // spoilers->writeToFile("Outputs/safety_spoilers.txt");
-        // debug end
-
         delete[] post_loc;
         delete[] arr2;
 

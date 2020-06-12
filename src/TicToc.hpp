@@ -30,11 +30,12 @@ class TicToc {
     /* function: toc 
      * set stop time and print out elapsed time since last call of tic()
      */
-    inline void toc(void) {
+    inline double toc(void) {
       stop=std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> dt;
       dt=std::chrono::duration_cast<std::chrono::duration<double > >(stop-start);
       std::cout << "Elapsed time is " << dt.count() << " seconds." << std::endl;
+        return dt.count();
     }
 };
 

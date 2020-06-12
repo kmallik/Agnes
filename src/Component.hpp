@@ -69,14 +69,14 @@ public:
         output_to_state=other.output_to_state;
         abs_type size = no_states*no_control_inputs*no_dist_inputs;
         post = new std::vector<abs_type>*[size];
-        for (int i=0; i<size; i++) {
+        for (abs_type i=0; i<size; i++) {
             post[i]=other.post[i];
         }
     }
     /* Destructor */
     ~Component() {
         abs_type no_elems = no_states*no_control_inputs*no_dist_inputs;
-        for (int i=0; i<no_elems; i++) {
+        for (abs_type i=0; i<no_elems; i++) {
             delete post[i];
         }
     }
@@ -148,12 +148,12 @@ public:
             throw std::runtime_error("Component:createDOT: Number of disturbance input labels does not match with the number of disturbance inputs.");
         }
         /* hyphen is a reserved label for universal choice for both control or joint inputs */
-        for (int i=0; i<control_input_labels.size(); i++) {
+        for (size_t i=0; i<control_input_labels.size(); i++) {
             if (*control_input_labels[i]=="-") {
                 throw std::runtime_error("Component:createDOT: hyphen cannot be used as a label for control inputs.");
             }
         }
-        for (int i=0; i<dist_input_labels.size(); i++) {
+        for (size_t i=0; i<dist_input_labels.size(); i++) {
             if (*dist_input_labels[i]=="-") {
                 throw std::runtime_error("Component:createDOT: hyphen cannot be used as a label for disturbance inputs.");
             }
@@ -256,7 +256,7 @@ public:
             }
         }
         /* write the graph */
-        int flag=createDiGraph<abs_type>(filename, graph_name, state_labels, state_clusters, init_, joint_input_labels, post_array);
+        createDiGraph<abs_type>(filename, graph_name, state_labels, state_clusters, init_, joint_input_labels, post_array);
 
         delete[] post_array;
     }

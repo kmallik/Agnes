@@ -34,4 +34,4 @@ $(TARGET):
 
 
 clean:
-	rm  ./$(TARGET)  ./$(TARGET).dSYM
+	rm -r -f  ./$(TARGET)  ./$(TARGET).dSYM

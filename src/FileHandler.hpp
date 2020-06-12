@@ -604,11 +604,11 @@ void writeArrVec(const std::string& filename, const std::string& arr_name, std::
     }
     if (file.is_open()) {
         file << "# " << arr_name << "\n";
-        for (int i=0; i<no_elem; i++) {
+        for (size_t i=0; i<no_elem; i++) {
             if (arr[i]->size()==0) {
                 file << "x\n";
             } else {
-                for (int j=0; j<arr[i]->size(); j++) {
+                for (size_t j=0; j<arr[i]->size(); j++) {
                     file << (*arr[i])[j] << " ";
                 }
                 file << "\n";
@@ -641,7 +641,7 @@ void writeArrSet(const std::string& filename, const std::string& arr_name, std::
     }
     if (file.is_open()) {
         file << "# " << arr_name << "\n";
-        for (int i=0; i<no_elem; i++) {
+        for (size_t i=0; i<no_elem; i++) {
             if (arr[i]->size()==0) {
                 file << "x\n";
             } else {
