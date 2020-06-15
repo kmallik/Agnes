@@ -14,6 +14,7 @@
 #include <iostream>
 #include <cmath>
 #include <unordered_set>
+#include <bits/stdc++.h> /* for setting max_depth_=highest possible integer by default */
 /* for getting the current directory name */
 #ifdef WINDOWS
 #include <direct.h>
@@ -114,6 +115,12 @@ int main() {
     checkMakeDir("Outputs");
     N.guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
     N.guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
+    
+    /* perform negotiation without the k-minimization */
+    TicToc timer_wo_minimization;
+    timer_wo_minimization.tic();
+    N.recursive_negotiation(INT_MAX, 0, 0);
+    double elapsed_time_wo_minimization=timer_wo_minimization.toc();
 
     /* save the contracts in DOT language */
     for (int p=0; p<2; p++) {
@@ -168,9 +175,9 @@ int main() {
     FILE* logfile=fopen(file_name, "a");
     if (logfile!=NULL) {
         if (k>k_max) {
-            fprintf(logfile, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\tFAILURE\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k_max, elapsed_time);
+            fprintf(logfile, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\ttime_wo_k-min=%f sec\tFAILURE\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k_max, elapsed_time, elapsed_time_wo_minimization);
         } else {
-            fprintf(logfile, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec \tSUCCESS\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k, elapsed_time);
+            fprintf(logfile, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\ttime_wo_k-min=%f sec \tSUCCESS\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k, elapsed_time, elapsed_time_wo_minimization);
         }
         
     }

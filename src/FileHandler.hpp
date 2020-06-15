@@ -514,7 +514,7 @@ void writeVec(const std::string& filename, const std::string& vec_name, std::vec
     }
     if (file.is_open()) {
         file << "# " << vec_name << "\n";
-        for (int i=0; i<v.size(); i++) {
+        for (size_t i=0; i<v.size(); i++) {
             file << v[i] << "\n";
         }
         file.close();
@@ -544,7 +544,7 @@ void writeVec(const std::string& filename, const std::string& vec_name, std::vec
     }
     if (file.is_open()) {
         file << "# " << vec_name << "\n";
-        for (int i=0; i<v.size(); i++) {
+        for (size_t i=0; i<v.size(); i++) {
             file << *v[i] << "\n";
         }
         file.close();
@@ -678,7 +678,7 @@ void writeVecSet(const std::string& filename, const std::string& vec_name, std::
     }
     if (file.is_open()) {
         file << "# " << vec_name << "\n";
-        for (int i=0; i<vec.size(); i++) {
+        for (size_t i=0; i<vec.size(); i++) {
             if (vec[i]->size()==0) {
                 file << "x\n";
             } else {

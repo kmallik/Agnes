@@ -282,18 +282,19 @@ public:
     /*! Perform k-steps of the bounded bisimulation algorithm.
      * \param[in] k         number of refinement iterations */
     void boundedBisim(int k=INT_MAX) {
-        for (int i=0; i<k; i++) {
-            refineQuotient();
-            /* if the refinement didn't produce new partition, then terminate the bounded bisimulation procedure */
-            if (k_==i) {
-                break;
+        if (k==INT_MAX) { /* if k is "infinity", then the minimized automaton is same as the full automaton */
+            *spoilers_mini_=*spoilers_full_;
+        } else { /* otherwise, do the minimization */
+            for (int i=0; i<k; i++) {
+                refineQuotient2();
+                /* if the refinement didn't produce new partition, then terminate the bounded bisimulation procedure */
+                if (k_==i) {
+                    break;
+                }
             }
+            spoilers_mini_->resetPost();
+            computeMiniTransitions();
         }
-        spoilers_mini_->resetPost();
-        computeMiniTransitions();
-//        /* TESTING: BOUNDED BISIM TURNED OFF */
-//        spoilers_mini_=spoilers_full_;
-//        /* END TESTING  */
     }
     private:
         /* set difference s1\s2 */

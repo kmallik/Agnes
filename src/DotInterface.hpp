@@ -53,7 +53,7 @@ int createDiGraph(const std::string& filename,
     }
     /* the initial vertices appear as diamond shaped */
     for (auto i=init_vertices.begin(); i!=init_vertices.end(); ++i) {
-        file << "\t" << *i << " [shape=diamond]" << "\n";
+        file << "\t" << *vertex_labels[*i] << " [shape=diamond]" << "\n";
     }
     file << "}";
     file.close();
@@ -145,7 +145,7 @@ int createDiGraph(const std::string& filename,
     }
     /* the initial vertices appear as diamond shaped */
     for (auto i=init_vertices.begin(); i!=init_vertices.end(); ++i) {
-        file << "\t" << *i << " [shape=diamond]" << "\n";
+        file << "\t" << *vertex_labels[*i] << " [shape=diamond]" << "\n";
     }
     file << "}";
     file.close();

@@ -16,12 +16,12 @@
 
  /* The parameters */
  #define pr1_data_size_ 4
- #define pr1_max_period_ 3
- #define pr1_deadline_ 10
+ #define pr1_max_period_ 4
+ #define pr1_deadline_ 25
 
  #define pr2_data_size_ 1
- #define pr2_max_period_ 1
- #define pr2_deadline_ 5
+ #define pr2_max_period_ 4
+ #define pr2_deadline_ 6
 
 using namespace std;
 using namespace negotiation;
@@ -67,8 +67,8 @@ int main() {
 
     for (int pid=0; pid<2; pid++) {
         /* ******** create the processes ******** */
-        /* There are states related to the writing process each having four components:
-         *   1: the state of one write operation ("idle" (0), "write" (1), "conflict" (2), or "success" (3))
+        /* There are states related to the writing process each having two components:
+         *   1: the state of one write operation ("idle" (0), "writing" (1))
          *   2: the number of packets remaining to be written (1 to data size)
          *   3: the time remaining in the global timer (deadline to 1)
          *   4: the time remaining until the next packet (max period to 1).
@@ -76,7 +76,7 @@ int main() {
          *   1: overall time-out (bad) -> state id 0
          *   2: period time-out (bad) -> state id 1
          *   3: task completed (good) -> state id 2 */
-        abs_type no_states = 4*ds[pid]*dl[pid]*mp[pid] + 3;
+        abs_type no_states = 2*ds[pid]*dl[pid]*mp[pid] + 3;
         /* the id of the writing related states are determined using the following lambda expression */
         auto state_id = [&](abs_type i, abs_type j, abs_type k, abs_type l) -> abs_type {
             if (j==0) {
@@ -113,14 +113,14 @@ int main() {
         /* state-to-output map */
         std::vector<abs_type> state_to_output;
         /* initialize state_to_output vector */
-        for (int i=0; i<no_states; i++) {
+        for (abs_type i=0; i<no_states; i++) {
             state_to_output.push_back(0);
         }
         /* the three sink states are always idle */
         state_to_output[0]=1;
         state_to_output[1]=1;
         state_to_output[2]=1;
-        for (int i=0; i<=3; i++) {
+        for (int i=0; i<=1; i++) {
             for (int j=1; j<=ds[pid]; j++) {
                 for (int k=1; k<=dl[pid]; k++) {
                     for (int l=1; l<=mp[pid]; l++) {
@@ -144,7 +144,7 @@ int main() {
         }
         /* state labels and state clusters needed for the visualization */
         std::vector<std::string*> state_labels;
-        for (int i=0; i<no_states; i++) {
+        for (abs_type i=0; i<no_states; i++) {
             std::string* s=new std::string;
             *s="";
             state_labels.push_back(s);
@@ -163,19 +163,13 @@ int main() {
             for (int k=1; k<=dl[pid]; k++) {
                 for (int l=1; l<=mp[pid]; l++) {
                     std::unordered_set<abs_type>* this_cluster=new std::unordered_set<abs_type>;
-                    for (int i=0; i<=3; i++) {
+                    for (int i=0; i<=1; i++) {
                         switch (i) {
                             case 0:
                                 *state_labels[state_id(i,j,k,l)]+="idle_";
                                 break;
                             case 1:
-                                *state_labels[state_id(i,j,k,l)]+="write_";
-                                break;
-                            case 2:
-                                *state_labels[state_id(i,j,k,l)]+="conflict_";
-                                break;
-                            case 3:
-                                *state_labels[state_id(i,j,k,l)]+="success_";
+                                *state_labels[state_id(i,j,k,l)]+="writing_";
                                 break;
                         }
                         *state_labels[state_id(i,j,k,l)]+=std::to_string(j);
@@ -193,18 +187,18 @@ int main() {
         std::vector<abs_type>** post = new std::vector<abs_type>*[no_states*no_control_inputs*no_dist_inputs];
         /* initialize post */
         /* the sink states */
-        for (int i=0; i<3*no_control_inputs*no_dist_inputs; i++) {
+        for (abs_type i=0; i<3*no_control_inputs*no_dist_inputs; i++) {
             std::vector<abs_type>* v = new std::vector<abs_type>;
             post[i]=v;
         }
         /* the other states */
         int ind=3*no_control_inputs*no_dist_inputs;
-        for (int i=0; i<=3; i++) {
+        for (int i=0; i<=1; i++) {
             for (int j=1; j<=ds[pid]; j++) {
                 for (int k=1; k<=dl[pid]; k++) {
                     for (int l=1; l<=mp[pid]; l++) {
-                        for (int u=0; u<no_control_inputs; u++) {
-                            for (int w=0; w<no_dist_inputs; w++) {
+                        for (abs_type u=0; u<no_control_inputs; u++) {
+                            for (abs_type w=0; w<no_dist_inputs; w++) {
                                 std::vector<abs_type>* v = new std::vector<abs_type>;
                                 post[ind]=v;
                                 ind++;
@@ -220,8 +214,8 @@ int main() {
         };
         /* add self loops to the sink states */
         for (int i=0; i<3; i++) {
-            for (int u=0; u<no_control_inputs; u++) {
-                for (int w=0; w<no_dist_inputs; w++) {
+            for (abs_type u=0; u<no_control_inputs; u++) {
+                for (abs_type w=0; w<no_dist_inputs; w++) {
                     post[post_addr(i,u,w)]->push_back(i);
                 }
             }
@@ -243,25 +237,11 @@ int main() {
                     post[post_addr(x,0,1)]->push_back(state_id(1,j,k-1,l_updated));
                     post[post_addr(x,1,0)]->push_back(state_id(0,j,k-1,l_updated));
                     post[post_addr(x,1,1)]->push_back(state_id(0,j,k-1,l_updated));
-                    /* state "write" */
+                    /* state "writing" */
                     x = state_id(1,j,k,l);
-                    post[post_addr(x,0,0)]->push_back(state_id(2,j,k-1,l_updated));
-//                    post[post_addr(x,0,1)]->push_back(state_id(3,j,k-1,l_updated)); // to success
-                    post[post_addr(x,0,1)]->push_back(state_id(1,j-1,k-1,mp[pid]-1)); // skip success state
-                    post[post_addr(x,1,0)]->push_back(state_id(2,j,k-1,l_updated));
-//                    post[post_addr(x,1,1)]->push_back(state_id(3,j,k-1,l_updated)); // to success
-                    post[post_addr(x,1,1)]->push_back(state_id(0,j-1,k-1,mp[pid]-1));
-                    /* state "conflict" */
-                    x = state_id(2,j,k,l);
                     post[post_addr(x,0,0)]->push_back(state_id(1,j,k-1,l_updated));
-                    post[post_addr(x,0,1)]->push_back(state_id(1,j,k-1,l_updated));
-                    post[post_addr(x,1,0)]->push_back(state_id(0,j,k-1,l_updated));
-                    post[post_addr(x,1,1)]->push_back(state_id(0,j,k-1,l_updated));
-                    /* state "success" */
-                    x = state_id(3,j,k,l);
-                    post[post_addr(x,0,0)]->push_back(state_id(1,j-1,k-1,mp[pid]-1));
                     post[post_addr(x,0,1)]->push_back(state_id(1,j-1,k-1,mp[pid]-1));
-                    post[post_addr(x,1,0)]->push_back(state_id(0,j-1,k-1,mp[pid]-1));
+                    post[post_addr(x,1,0)]->push_back(state_id(0,j,k-1,l_updated));
                     post[post_addr(x,1,1)]->push_back(state_id(0,j-1,k-1,mp[pid]-1));
                 }
             }
