@@ -124,6 +124,64 @@ public:
             }
         }
     }
+    /*! A simple refinement based on the distance of the states from the rejecting sink state */
+    void refineQuotient2() {
+        /* set of exposed concrete state indices */
+        std::unordered_set<abs_type> exposed_conc_states;
+        /* save the abstract states which have been already refined completely */
+        std::unordered_set<abs_type> refined_old = refined_partitions_;
+        /* collect all the concrete states which are currently exposed */
+        for (auto ia=refined_partitions_.begin(); ia!=refined_partitions_.end(); ++ia) {
+            for (auto ic=quotient_[*ia]->begin(); ic!=quotient_[*ia]->end(); ++ic) {
+                exposed_conc_states.insert(*ic);
+            }
+        }
+        /* compute existential predecessor (using the full transitions system) of the refined states */
+        std::unordered_set<abs_type> pre_states;
+        spoilers_full_->Pre(exposed_conc_states, pre_states);
+        /* the states which are in the predecessor but not exposed form new partitions */
+        std::unordered_set<abs_type> new_partition = setDifference(pre_states, exposed_conc_states);
+        /* if the newly formed partition was not empty then increment k_ and update the refined partitions list */
+        if (new_partition.size()!=0) {
+            k_++;
+        }
+        /* save the set of non-exposed states */
+        std::unordered_set<abs_type>* last_quotient_old=new std::unordered_set<abs_type>;
+        *last_quotient_old=*quotient_[quotient_.size()-1];
+        /* remove the last quotient element */
+        quotient_.pop_back();
+        /* all the newly exposed concrete states get one unique quotient each */
+        abs_type ia=quotient_.size(); /* the new quotient index of the first exposed state to be pulled in the following loop */
+        for (auto ic=new_partition.begin(); ic!=new_partition.end(); ++ic) {
+            /* take the current concrete state out of the list of non-partitioned states */
+            last_quotient_old->erase(*ic);
+            /* each concrete state forms a singleton parition on its own */
+            std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
+            s->insert(*ic);
+            quotient_.push_back(s);
+            spoilers_mini_->no_states_++;
+            /* update the inverse quotient mapping */
+            inv_quotient_[*ic]->clear();
+            inv_quotient_[*ic]->insert(ia);
+            ia++; /* increment quotient index for the next concrete exposed state to be pulled */
+        }
+        /* add the remaining non-refined states to the last abstract state index */
+        quotient_.push_back(last_quotient_old);
+        spoilers_mini_->no_states_++;
+        for (auto ic=last_quotient_old->begin(); ic!=last_quotient_old->end(); ++ic) {
+            inv_quotient_[*ic]->clear();
+            inv_quotient_[*ic]->insert(quotient_.size()-1);
+        }
+        /* update the list of exposed states */
+        for (auto i=new_partition.begin(); i!=new_partition.end(); ++i) {
+            refined_partitions_.insert(*inv_quotient_[*i]->begin());
+        }
+        /* update the spoilers_mini_ initial state */
+        spoilers_mini_->init_.clear();
+        for (auto i=spoilers_full_->init_.begin(); i!=spoilers_full_->init_.end(); ++i) {
+            spoilers_mini_->init_.insert(*inv_quotient_[*i]->begin());
+        }
+    }
     /*! Refine the abstract states once */
     void refineQuotient() {
         /* S1, S2 are used to store the overlapping and non-overlapping pre states respectively */
@@ -237,6 +295,19 @@ public:
 //        spoilers_mini_=spoilers_full_;
 //        /* END TESTING  */
     }
+    private:
+        /* set difference s1\s2 */
+        template<class T>
+        std::unordered_set<T> setDifference(const std::unordered_set<T>& s1, const std::unordered_set<T>& s2) {
+            std::unordered_set<T> s;
+            for (auto i1=s1.begin(); i1!=s1.end(); ++i1) {
+                if (s2.find(*i1)==s2.end()) {
+                    /* the current element is in the difference */
+                    s.insert(*i1);
+                }
+            }
+            return s;
+        }
 }; /* end of class definition */
 } /* end of namespace negotiation */
 #endif

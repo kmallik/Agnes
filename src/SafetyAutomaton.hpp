@@ -351,6 +351,21 @@ public:
 
         delete[] post_det_arr;
     }
+    /*! Existential predecessor of the full transition system
+     * \param[in] S1        a given set of state indices of the safety automaton
+     * \param[in] S2        predecessors of S1 */
+    void Pre(std::unordered_set<abs_type>& S1, std::unordered_set<abs_type>& S2) {
+        S2.clear();
+        for (abs_type i=0; i<no_states_; i++) {
+            for (abs_type j=0; j<no_inputs_; j++) {
+                for (auto i2=post_[addr(i,j)]->begin(); i2!=post_[addr(i,j)]->end(); ++i2) {
+                    if (S1.find(*i2)!=S1.end()) {
+                        S2.insert(i);
+                    }
+                }
+            }
+        }
+    }
     /*! (Over-)write the safety automaton to a file */
     void writeToFile(const string& filename) {
         create(filename);
