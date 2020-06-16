@@ -108,12 +108,21 @@ public:
         if (verbose_>1) {
             s_init->writeToFile("Outputs/spoiler.txt");
         }
+        /* variable for checking saturation of the k-minimization */
+        bool saturated=false;
         /* negotiate until either a solution is found, or until k reaches maximum depth */
         while (1) {
             /* stop when maximum depth is reached */
             if (k>max_depth_) {
-                std::cout << "Maximum search depth of spoiling behavior reached. No solution found. Terminating." << '\n';
+                std::cout << "Maximum search depth of spoiling behavior reached. Existence of solution unknown. Terminating." << '\n';
                 return k;
+            }
+            /* stop when the k-minimization gets saturated */
+            if (saturated) {
+                std::cout << "Search got saturated in the depth of spoiling behavior. No solution exists. Terminating." << '\n';
+                return k;
+            } else {
+                saturated=true;
             }
             /* recursively perform the negotiation */
             std::cout << "current depth = " << k << std::endl;
@@ -122,7 +131,7 @@ public:
             if (init_winning==2) {
                 /* the initial component is sure winning, so start with the other component, and noting that one of the components is winning */
                 std::cout << "\tThe game is sure winning for component " << starting_component << "." << '\n';
-                success = recursive_negotiation(k,1-starting_component,1);
+                success = recursive_negotiation(k,1-starting_component,1,saturated);
             } else {
                 /* find the spoilers for the starting_component upto the current depth, and update the current set of assumptions and guarantees */
                 std::cout << "\tCompressing spoilers for component " << starting_component << "." << '\n';
@@ -130,6 +139,10 @@ public:
                 negotiation::Spoilers spoiler(s_init);
                 /* minimize spoilers */
                 spoiler.boundedBisim(k);
+                /* check saturation */
+                if (spoiler.k_==k && saturated) {
+                    saturated=false;
+                }
                 /* determinize the minimized spoiler automaton */
                 spoiler.spoilers_mini_->determinize();
                 /* minimize the guarantee automaton further before saving */
@@ -142,7 +155,7 @@ public:
                     guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
                     guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
                 }
-                success = recursive_negotiation(k,1-starting_component,0);
+                success = recursive_negotiation(k,1-starting_component,0,saturated);
             }
             if (success) {
                 return k;
@@ -163,8 +176,9 @@ public:
      * \param[in] k         prescribed length of the spoiling behavior set.
      * \param[in] c         the index of the component who gets to compute the spoiling behaviors in this round.
      * \param[in] done  a counter counting the number of components which can surely win with the current contracts.
+     * \param[in] is_saturated  a boolean flag checking whether the negotiation process got saturated in the depth of the spoiler minimization
      * \param[out] true/false   success/failure of the negotiation. */
-    bool recursive_negotiation(const int k, const int c, int done) {
+    bool recursive_negotiation(const int k, const int c, int done, bool& is_saturated) {
         std::cout << "\tTurn = " << c << '\n';
         negotiation::SafetyAutomaton* s = new negotiation::SafetyAutomaton();
         std::cout << "\tComputing spoiler for component " << c << ".\n";
@@ -184,12 +198,16 @@ public:
         } else if (done==0 && flag==2) {
             /* when the component c---but not (1-c)---has a sure winning strategy with the present contract, it's component (1-c)'s turn to compute the spoilers */
             std::cout << "\tThe game is sure winning for component " << c << "." << '\n';
-            return recursive_negotiation(k,1-c,done+1);
+            return recursive_negotiation(k,1-c,done+1,is_saturated);
         } else {
             /* compress the spoilers for component c, and update the current set of assumptions and guarantees */
             std::cout << "\tCompressing spoilers for component " << c << "." << '\n';
             negotiation::Spoilers spoiler(s);
             spoiler.boundedBisim(k);
+            /* check saturation */
+            if (spoiler.k_==k && is_saturated) {
+                is_saturated=false;
+            }
             /* update the guarantee of the other component */
             negotiation::SafetyAutomaton guarantee_updated(*guarantee_[1-c],*spoiler.spoilers_mini_);
             guarantee_updated.trim();
@@ -204,7 +222,7 @@ public:
                 guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
                 guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
             }
-            bool flag2 = recursive_negotiation(k,1-c,0);
+            bool flag2 = recursive_negotiation(k,1-c,0,is_saturated);
             if (flag2) {
                 return true;
             } else {
