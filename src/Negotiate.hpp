@@ -256,8 +256,31 @@ public:
             std::cout << "\t\tNumber of sure safe states = " << num_sure << ".\n";
             std::cout << "\t\tNumber of maybe safe states = " << num_maybe << ".\n";
         }
+        /* the induced sure win strategy are sure winning strategies (when they exist), or control inputs for which all disturbance inputs are in maybe winning strategy */
+        std::vector<std::unordered_set<abs_type>*> sure_safe_induced;
+        for (abs_type i=0; i<monitor.no_states; i++) {
+            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+            if (sure_safe[i]->size()!=0) {
+                *set=*sure_safe[i];
+            } else {
+                for (abs_type j=0; j<monitor.no_control_inputs; j++) {
+                    /* if for this control input all the disturbance inputs are in the maybe winning strategy, then this control input is an induced sure safe strategy */
+                    bool is_induced_sure_strategy=true;
+                    for (abs_type k=0; k<monitor.no_dist_inputs; k++) {
+                        if (maybe_safe[i]->find(monitor.addr_uw(j,k))==maybe_safe[i]->end()) {
+                            is_induced_sure_strategy=false;
+                            break;
+                        }
+                    }
+                    if (is_induced_sure_strategy) {
+                        set->insert(j);
+                    }
+                }
+            }
+            sure_safe_induced.push_back(set);
+        }
         SafetyAutomaton* spoilers_safety = new SafetyAutomaton;
-        int flag1 = monitor.find_spoilers(sure_safe, maybe_safe, spoilers_safety);
+        int flag1 = monitor.find_spoilers(sure_safe_induced, maybe_safe, spoilers_safety);
         /* if some initial states are surely losing the safety specification, then return out_flag=0 */
         if (flag1==0) {
             out_flag=0;
@@ -280,7 +303,7 @@ public:
             /* if the safety game was sure winning, then the only restriction on input choices during the liveness game part comes from the sure winning strategy */
             for (abs_type i=0; i<monitor.no_states; i++) {
                 std::unordered_set<abs_type>* s = new std::unordered_set<abs_type>;
-                for (auto l=sure_safe[i]->begin(); l!=sure_safe[i]->end(); ++l) {
+                for (auto l=sure_safe_induced[i]->begin(); l!=sure_safe_induced[i]->end(); ++l) {
                     for (abs_type k=0; k<monitor.no_dist_inputs; k++) {
                         s->insert(monitor.addr_uw(*l,k));
                     }
@@ -295,7 +318,7 @@ public:
                 allowed_joint_inputs.push_back(s);
             }
         }
-        negotiation::LivenessGame monitor_live(monitor, *target_states_[c], sure_safe, allowed_joint_inputs);
+        negotiation::LivenessGame monitor_live(monitor, *target_states_[c], sure_safe_induced, allowed_joint_inputs);
         flag2 = monitor_live.find_spoilers(spoilers_liveness);
         /* print debugging info */
         if (verbose_>1 && flag2==1) {

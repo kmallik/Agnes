@@ -392,10 +392,39 @@ public:
         int out_flag;
         /* solve the liveness game with sure semantics */
         std::vector<unordered_set<abs_type>*> sure_win = solve_liveness_game("sure");
+        /* assumption violation is removed from target to avoid direct help from falsifying the assumption */
+        monitor_target_states_.erase(0);
+        /* solve the liveness game with maybe semantics */
+        std::vector<unordered_set<abs_type>*> maybe_win_without_assumption_violation = solve_liveness_game("maybe");
+        /* restore assumption violation as target state for future solution of sure winning */
+        monitor_target_states_.insert(0);
+        /* the induced sure liveness strategy are sure winning strategies (when they exist), or control inputs for which all disturbance inputs are in maybe winning strategy */
+        std::vector<std::unordered_set<abs_type>*> sure_win_induced;
+        for (abs_type i=0; i<no_states; i++) {
+            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+            if (sure_win[i]->size()!=0) {
+                *set=*sure_win[i];
+            } else {
+                for (abs_type j=0; j<no_control_inputs; j++) {
+                    /* if for this control input all the disturbance inputs are in the maybe winning strategy, then this control input is an induced sure liveness strategy */
+                    bool is_induced_sure_strategy=true;
+                    for (abs_type k=0; k<no_dist_inputs; k++) {
+                        if (maybe_win_without_assumption_violation[i]->find(addr_uw(j,k))==maybe_win_without_assumption_violation[i]->end()) {
+                            is_induced_sure_strategy=false;
+                            break;
+                        }
+                    }
+                    if (is_induced_sure_strategy) {
+                        set->insert(j);
+                    }
+                }
+            }
+            sure_win_induced.push_back(set);
+        }
         /* if all the initial states are sure winning, then the set of spoiling behaviors is empty */
         bool allInitSureWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
-            if (sure_win[*i]->size()==0) {
+            if (sure_win_induced[*i]->size()==0) {
                 allInitSureWinning=false;
                 break;
             }
@@ -407,12 +436,7 @@ public:
             out_flag=2;
             return out_flag;
         }
-        /* assumption violation is removed from target to avoid direct help from falsifying the assumption */
-        monitor_target_states_.erase(0);
-        /* solve the liveness game with maybe semantics */
-        std::vector<unordered_set<abs_type>*> maybe_win_without_assumption_violation = solve_liveness_game("maybe");
-        /* restore assumption violation as target state for future solution of sure winning */
-        monitor_target_states_.insert(0);
+        
         /* if not all the initial states are maybe winning, then no negotiation is possible: return false */
         bool allInitMaybeWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {

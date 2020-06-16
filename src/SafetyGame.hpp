@@ -119,13 +119,36 @@ public:
     }
     /*! Generate the spoiling behavior as a safety automaton and write to a file.
      * \param[in] sure_win    sure winning state-control input pairs
-     * \param[in] maybe_win maybe winning state-join input pairs
+     * \param[in] maybe_win maybe winning state-joint input pairs
      * \param[in] spoilers        the safety automaton storing the spoiling behaviors
      * \param[out] out_flag   0 -> some initial states are sure losing, 2 -> all initial states are sure winning, 1-> otherwise. For out_flag=0,2, spoilers is an automaton that accepts all strings.
      */
     int find_spoilers(const std::vector<std::unordered_set<negotiation::abs_type>*>& sure_win, const std::vector<std::unordered_set<negotiation::abs_type>*>& maybe_win, negotiation::SafetyAutomaton* spoilers) {
         /* the output flag */
         int out_flag;
+//        /* the induced sure win strategy are sure winning strategies (when they exist), or control inputs for which all disturbance inputs are in maybe winning strategy */
+//        std::vector<std::unordered_set<abs_type>*> sure_win_induced;
+//        for (abs_type i=0; i<no_states; i++) {
+//            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
+//            if (sure_win[i]->size()!=0) {
+//                *set=*sure_win[i];
+//            } else {
+//                for (abs_type j=0; j<no_control_inputs; j++) {
+//                    /* if for this control input all the disturbance inputs are in the maybe winning strategy, then this control input is an induced sure safe strategy */
+//                    bool is_induced_sure_strategy=true;
+//                    for (abs_type k=0; k<no_dist_inputs; k++) {
+//                        if (maybe_win[i]->find(addr_uw(j,k))==maybe_win[i]->end()) {
+//                            is_induced_sure_strategy=false;
+//                            break;
+//                        }
+//                    }
+//                    if (is_induced_sure_strategy) {
+//                        set->insert(j);
+//                    }
+//                }
+//            }
+//            sure_win_induced.push_back(set);
+//        }
         /* if all the initial states are sure winning, then the set of spoiling behaviors is empty */
         bool allInitSureWinning=true;
         for (auto i=init_.begin(); i!=init_.end(); ++i) {
@@ -189,29 +212,6 @@ public:
             std::unordered_set<abs_type>* v=new std::unordered_set<abs_type>;
             post_loc[i]=v;
         }
-        /* the induced sure win strategy are sure winning strategies (when they exist), or control inputs for which all disturbance inputs are in maybe winning strategy */
-        std::vector<std::unordered_set<abs_type>*> sure_win_induced;
-        for (abs_type i=0; i<no_states; i++) {
-            std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
-            if (sure_win[i]->size()!=0) {
-                *set=*sure_win[i];
-            } else {
-                for (abs_type j=0; j<no_control_inputs; j++) {
-                    /* if for this control input all the disturbance inputs are in the maybe winning strategy, then this control input is an induced sure safe strategy */
-                    bool is_induced_sure_strategy=true;
-                    for (abs_type k=0; k<no_dist_inputs; k++) {
-                        if (maybe_win[i]->find(addr_uw(j,k))==maybe_win[i]->end()) {
-                            is_induced_sure_strategy=false;
-                            break;
-                        }
-                    }
-                    if (is_induced_sure_strategy) {
-                        set->insert(j);
-                    }
-                }
-            }
-            sure_win_induced.push_back(set);
-        }
         /* first fill the post array by disregarding the control restriction imposed by sure_win and maybe_win */
         /* 0 is the sink state */
         for (abs_type j=0; j<no_control_inputs; j++) {
@@ -253,9 +253,9 @@ public:
                 continue;
             }
             /* if the state i is sure winning: no outgoing transition to reject state, and only outgoing transitions conforming to the strategy */
-            if (sure_win_induced[i]->size()!=0) {
+            if (sure_win[i]->size()!=0) {
                 /* iterate over all the winning strategies */
-                for (auto it=sure_win_induced[i]->begin(); it!=sure_win_induced[i]->end(); ++it) {
+                for (auto it=sure_win[i]->begin(); it!=sure_win[i]->end(); ++it) {
                     /* iterate over all the disturbance inputs*/
                     for (abs_type k=0; k<no_dist_inputs; k++) {
                         /* iterate over all the post states */
