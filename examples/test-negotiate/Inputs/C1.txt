@@ -1,40 +1,21 @@
 # NO_STATES (N)
-5
+2
 # NO_INITIAL_STATES
 1
 # INITIAL_STATE_LIST
 0
-# NO_CONTROL_INPUTS (M, 0=push, 1=wait)
+# NO_CONTROL_INPUTS 
 2
-# NO_DIST_INPUTS (P, 0=nop2, 1=op2)
-2
-# NO_OUTPUTS (0=nop1, 1=op1)
+# NO_DIST_INPUTS 
+1
+# NO_OUTPUTS 
 2
 # STATE_TO_OUTPUT
 1
 0
-1
-1
-1
 
 # TRANSITION_POST (the set of post for state-control-disturbance tuple (i,j,k) is stored in (i*M*P + j*P + k)-th row, where all the indices, including that of the row, start from 0)
-3
 0
 1
 0
-3
-2
-3
-2
-2
-2
-2
-2
-1 4
-3
-1 4
-2
-4
-4
-4
-4
+1

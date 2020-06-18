@@ -49,9 +49,9 @@ int main() {
     // int max_depth=4;
     // negotiation::Negotiate N(component_files, safe_states_files, target_states_files, max_depth);
 
-    negotiation::Negotiate N(component_files, safe_states_files, target_states_files);
+    negotiation::Negotiate N(component_files, safe_states_files, target_states_files, 25, 2);
 
-    N.iterative_deepening_search();
+    int out_flag = N.fixed_depth_search(3);
 
     checkMakeDir("Outputs");
     N.guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");

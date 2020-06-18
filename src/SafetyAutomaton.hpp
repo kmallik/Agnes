@@ -75,27 +75,10 @@ public:
     }
     /*! Constructor: product of two safety automata
      * \param[in] A1      the first safety automaton
-     * \param[in] A2      the second safety automaton */
+     * \param[in] A2      the second safety automaton
+     * NOTE: If the transitions of automata A1 and A2 are not complete, then we redirect the missing transitions to the rejecting sink state 0. */
     SafetyAutomaton(const negotiation::SafetyAutomaton& A1,
                  const negotiation::SafetyAutomaton& A2) {
-        /* the number of states of the product is the product of the number of states of A1 and A2 */
-        no_states_ = (A1.no_states_-1)*(A2.no_states_-1)+1;
-        /* the new state index is derived using the following lambda expression */
-        auto new_ind = [&](abs_type i1, abs_type i2) -> abs_type {
-            if (i1==0 || i2==0) {
-                /* whenever one of the individual states is non-accepting, the joint state is also non-accepting */
-                return 0;
-            } else {
-                /* the indexing starts at 1 (excluding the sink) */
-                return ((i1-1)*(A2.no_states_-1) + (i2-1)) + 1;
-            }
-        };
-        /* a product state is initial if all the corresponding individual states are initial */
-        for (auto i1=A1.init_.begin(); i1!=A1.init_.end(); ++i1) {
-            for (auto i2=A2.init_.begin(); i2!=A2.init_.end(); ++i2) {
-                init_.insert(new_ind(*i1,*i2));
-            }
-        }
         /* sanity check: the size of input space of A1 and A2 should be the same */
         if (A1.no_inputs_!=A2.no_inputs_) {
             try {
@@ -105,6 +88,42 @@ public:
             }
         } else {
             no_inputs_=A1.no_inputs_;
+        }
+        /* make the automata complete */
+        /* first make local copies of the given automata */
+        negotiation::SafetyAutomaton A1_local(A1);
+        negotiation::SafetyAutomaton A2_local(A2);
+        for (abs_type i=0; i<A1_local.no_states_; i++) {
+            for (abs_type j=0; j<A1_local.no_inputs_; j++) {
+                if (A1_local.post_[A1_local.addr(i,j)]->size()==0) {
+                    A1_local.post_[A1_local.addr(i,j)]->insert(0);
+                }
+            }
+        }
+        for (abs_type i=0; i<A2_local.no_states_; i++) {
+            for (abs_type j=0; j<A2_local.no_inputs_; j++) {
+                if (A2_local.post_[A2_local.addr(i,j)]->size()==0) {
+                    A2_local.post_[A2_local.addr(i,j)]->insert(0);
+                }
+            }
+        }
+        /* the number of states of the product is the product of the number of states of A1_local and A2_local */
+        no_states_ = (A1_local.no_states_-1)*(A2_local.no_states_-1)+1;
+        /* the new state index is derived using the following lambda expression */
+        auto new_ind = [&](abs_type i1, abs_type i2) -> abs_type {
+            if (i1==0 || i2==0) {
+                /* whenever one of the individual states is non-accepting, the joint state is also non-accepting */
+                return 0;
+            } else {
+                /* the indexing starts at 1 (excluding the sink) */
+                return ((i1-1)*(A2_local.no_states_-1) + (i2-1)) + 1;
+            }
+        };
+        /* a product state is initial if all the corresponding individual states are initial */
+        for (auto i1=A1_local.init_.begin(); i1!=A1_local.init_.end(); ++i1) {
+            for (auto i2=A2_local.init_.begin(); i2!=A2_local.init_.end(); ++i2) {
+                init_.insert(new_ind(*i1,*i2));
+            }
         }
         /* compute the post */
         std::unordered_set<abs_type>** post = new std::unordered_set<abs_type>*[no_states_*no_inputs_];
@@ -116,14 +135,14 @@ public:
         }
         /* compute post for the non-sink states */
         abs_type index = no_inputs_;
-        for (abs_type i1=1; i1<A1.no_states_; i1++) {
-            for (abs_type i2=1; i2<A2.no_states_; i2++) {
+        for (abs_type i1=1; i1<A1_local.no_states_; i1++) {
+            for (abs_type i2=1; i2<A2_local.no_states_; i2++) {
                 for (abs_type j=0; j<no_inputs_; j++) {
                     std::unordered_set<abs_type>* set = new std::unordered_set<abs_type>;
-                    abs_type p1 = A1.addr(i1,j);
-                    for (auto l1=A1.post_[p1]->begin(); l1!=A1.post_[p1]->end(); ++l1) {
-                        abs_type p2 = A2.addr(i2,j);
-                        for (auto l2=A2.post_[p2]->begin(); l2!=A2.post_[p2]->end(); ++l2) {
+                    abs_type p1 = A1_local.addr(i1,j);
+                    for (auto l1=A1_local.post_[p1]->begin(); l1!=A1_local.post_[p1]->end(); ++l1) {
+                        abs_type p2 = A2_local.addr(i2,j);
+                        for (auto l2=A2_local.post_[p2]->begin(); l2!=A2_local.post_[p2]->end(); ++l2) {
                             set->insert(new_ind(*l1,*l2));
                         }
                     }
