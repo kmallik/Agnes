@@ -15,9 +15,9 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
+ #define feeder_max_wait_cycles_ 7
  #define plant_process_cycles_ 3
  #define plant_hibernate_cycle_ 3
- #define feeder_max_wait_cycles_ 7
 
 using namespace std;
 using namespace negotiation;
@@ -49,7 +49,9 @@ int main() {
     Length = Str_input_folder.copy(input_folder_name, Str_input_folder.length() + 1);
     input_folder_name[Length] = '\0';
     checkMakeDir(input_folder_name);
+    /* ***********************************************/
     /* generate the feeder model */
+    /* ************************************************/
     /* the number of states constitutes of 4 fixed states:
      * 0: "empty"
      * 1: "part full"
@@ -121,11 +123,19 @@ int main() {
     if (feeder_max_wait_cycles_>1) {
         post_feeder[post_addr_feeder(2,1,0)]->push_back(4);
         post_feeder[post_addr_feeder(2,1,1)]->push_back(4);
+        /* for completeness of transitions */
+        post_feeder[post_addr_feeder(2,0,0)]->push_back(4);
+        post_feeder[post_addr_feeder(2,0,1)]->push_back(4);
     } else {
         post_feeder[post_addr_feeder(2,1,0)]->push_back(3);
         post_feeder[post_addr_feeder(2,1,1)]->push_back(3);
+        /* for completeness of transitions */
+        post_feeder[post_addr_feeder(2,0,0)]->push_back(3);
+        post_feeder[post_addr_feeder(2,0,1)]->push_back(3);
     }
     post_feeder[post_addr_feeder(2,1,2)]->push_back(3);
+    /* for completeness of transitions */
+    post_feeder[post_addr_feeder(2,0,2)]->push_back(3);
 
     /* transitions from rest of the states */
     for (abs_type i=3; i<no_states_feeder-2; i++) {
@@ -142,6 +152,10 @@ int main() {
             post_feeder[post_addr_feeder(i,1,0)]->push_back(i+2);
             post_feeder[post_addr_feeder(i,1,1)]->push_back(i+2);
             post_feeder[post_addr_feeder(i,1,2)]->push_back(i-1);
+            /* for completeness of transitions */
+            post_feeder[post_addr_feeder(i,0,0)]->push_back(i+2);
+            post_feeder[post_addr_feeder(i,0,1)]->push_back(i+2);
+            post_feeder[post_addr_feeder(i,0,2)]->push_back(i-1);
         }
     }
 
@@ -149,6 +163,10 @@ int main() {
         post_feeder[post_addr_feeder(no_states_feeder-2,1,0)]->push_back(no_states_feeder-1);
         post_feeder[post_addr_feeder(no_states_feeder-2,1,1)]->push_back(no_states_feeder-1);
         post_feeder[post_addr_feeder(no_states_feeder-2,1,2)]->push_back(no_states_feeder-1);
+        /* for completeness of transitions */
+        post_feeder[post_addr_feeder(no_states_feeder-2,0,0)]->push_back(no_states_feeder-1);
+        post_feeder[post_addr_feeder(no_states_feeder-2,0,1)]->push_back(no_states_feeder-1);
+        post_feeder[post_addr_feeder(no_states_feeder-2,0,2)]->push_back(no_states_feeder-1);
     }
 
     /* self loop in the shutdown state */
@@ -249,13 +267,21 @@ int main() {
     /* outgoing transitions from idle, empty state */
     if (plant_effective_hibernate_cycle_>1) {
         post_plant[post_addr_plant(0,1,0)]->push_back(2*plant_process_cycles_+2);
+        /* for completeness of transitions */
+        post_plant[post_addr_plant(0,0,0)]->push_back(2*plant_process_cycles_+2);
     } else {
         post_plant[post_addr_plant(0,1,0)]->push_back(0);
+        /* for completeness of transitions */
+        post_plant[post_addr_plant(0,0,0)]->push_back(0);
     }
     if (plant_effective_hibernate_cycle_>2) {
         post_plant[post_addr_plant(0,1,1)]->push_back(no_states_plant - (plant_effective_hibernate_cycle_-1));
+        /* for completeness of transitions */
+        post_plant[post_addr_plant(0,0,1)]->push_back(no_states_plant - (plant_effective_hibernate_cycle_-1));
     } else {
         post_plant[post_addr_plant(0,1,1)]->push_back(1);
+        /* for completeness of transitions */
+        post_plant[post_addr_plant(0,0,1)]->push_back(1);
     }
 
     /* outgoing transitions from idle, non empty states */
@@ -278,20 +304,32 @@ int main() {
                 /* busy, empty states */
                 post_plant[post_addr_plant(i,0,0)]->push_back(i+2);
                 post_plant[post_addr_plant(i,0,1)]->push_back(i+3);
+                /* for completeness of transitions */
+                post_plant[post_addr_plant(i,1,0)]->push_back(i+2);
+                post_plant[post_addr_plant(i,1,1)]->push_back(i+3);
             } else {
                 /* busy, non-empty states */
                 post_plant[post_addr_plant(i,0,0)]->push_back(i+2);
                 post_plant[post_addr_plant(i,0,1)]->push_back(i+2);
+                /* for completeness of transitions */
+                post_plant[post_addr_plant(i,1,0)]->push_back(i+2);
+                post_plant[post_addr_plant(i,1,1)]->push_back(i+2);
             }
         } else {
             /* the end of process cycle states */
             if (i%2==0) {
                 /* busy, empty states */
                 post_plant[post_addr_plant(i,1,0)]->push_back(0);
+                /* for completeness of transitions */
+                post_plant[post_addr_plant(i,0,0)]->push_back(0);
                 if (plant_effective_hibernate_cycle_==1) {
                     post_plant[post_addr_plant(i,1,1)]->push_back(1);
+                    /* for completeness of transitions */
+                    post_plant[post_addr_plant(i,0,1)]->push_back(1);
                 } else {
                     post_plant[post_addr_plant(i,1,1)]->push_back(no_states_plant - (plant_effective_hibernate_cycle_-1));
+                    /* for completeness of transitions */
+                    post_plant[post_addr_plant(i,0,1)]->push_back(no_states_plant - (plant_effective_hibernate_cycle_-1));
                 }
             } else {
                 /* busy, non-empty states */
@@ -314,9 +352,15 @@ int main() {
         if (counter>1) {
             post_plant[post_addr_plant(i,1,0)]->push_back(i+1);
             post_plant[post_addr_plant(i,1,1)]->push_back(no_states_plant-counter+1);
+            /* for completeness of transitions */
+            post_plant[post_addr_plant(i,0,0)]->push_back(i+1);
+            post_plant[post_addr_plant(i,0,1)]->push_back(no_states_plant-counter+1);
         } else {
             post_plant[post_addr_plant(i,1,0)]->push_back(i);
             post_plant[post_addr_plant(i,1,1)]->push_back(1);
+            /* for completeness of transitions */
+            post_plant[post_addr_plant(i,0,0)]->push_back(i);
+            post_plant[post_addr_plant(i,0,1)]->push_back(1);
         }
     }
 

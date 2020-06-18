@@ -115,12 +115,6 @@ int main() {
     checkMakeDir("Outputs");
     N.guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
     N.guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
-    
-    /* perform negotiation without the k-minimization */
-    TicToc timer_wo_minimization;
-    timer_wo_minimization.tic();
-    N.recursive_negotiation(INT_MAX, 0, 0);
-    double elapsed_time_wo_minimization=timer_wo_minimization.toc();
 
     /* save the contracts in DOT language */
     for (int p=0; p<2; p++) {
@@ -171,16 +165,51 @@ int main() {
         }
     }
     /* save results to the log file */
-    char file_name[20]="../results.log";
-    FILE* logfile=fopen(file_name, "a");
-    if (logfile!=NULL) {
-        if (k>k_max) {
-            fprintf(logfile, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\ttime_wo_k-min=%f sec\tFAILURE\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k_max, elapsed_time, elapsed_time_wo_minimization);
+    char file_name1[40]="../results_iterative_search.log";
+    FILE* logfile1=fopen(file_name1, "a");
+    if (logfile1!=NULL) {
+        if (k==-1) {
+            fprintf(logfile1, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\tCONTRACT DOESN'T EXIST\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, -1, elapsed_time);
+        } else if (k > k_max) {
+            fprintf(logfile1, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\tINCONCLUSIVE NEGOTIATION\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k, elapsed_time);
         } else {
-            fprintf(logfile, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\ttime_wo_k-min=%f sec \tSUCCESS\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k, elapsed_time, elapsed_time_wo_minimization);
+            fprintf(logfile1, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\tSUCCESSFUL NEGOTIATION\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k, elapsed_time);
+            /* perform negotiation with fixed k-minimization */
+            char file_name2[40]="../results_fixed_depth_search.log";
+            FILE* logfile2=fopen(file_name2, "a");
+            TicToc timer_fixed_minimization;
+            for (int l=0; l<=k; l++) {
+                timer_fixed_minimization.tic();
+                int out=N.fixed_depth_search(l, 0);
+                double elapsed_time_fixed_minimization=timer_fixed_minimization.toc();
+                /* save results to the log file */
+                if (logfile2!=NULL) {
+                    fprintf(logfile2, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, l, elapsed_time_fixed_minimization);
+                }
+            }
         }
         
     }
+    /* perform negotiation without the k-minimization */
+    TicToc timer_wo_minimization;
+    timer_wo_minimization.tic();
+    bool flag=false;
+    N.reset();
+    N.recursive_negotiation(INT_MAX, 0, 0, flag);
+    double elapsed_time_wo_minimization=timer_wo_minimization.toc();
+    /* save results to the log file */
+    char file_name3[40]="../results_plain_negotiation.log";
+    FILE* logfile3=fopen(file_name3, "a");
+    if (logfile3!=NULL) {
+        if (k==-1) {
+            fprintf(logfile3, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\tCONTRACT DOESN'T EXIST\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, -1, elapsed_time_wo_minimization);
+        } else if (k > k_max) {
+            fprintf(logfile3, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\tINCONCLUSIVE NEGOTIATION\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k, elapsed_time_wo_minimization);
+        } else {
+            fprintf(logfile3, "%s \t|X0|=%i \t|X1|=%i \tG0:%i states \tG1:%i states \tk=%i \ttime=%f sec\tSUCCESSFUL NEGOTIATION\n", params, N.components_[0]->no_states, N.components_[1]->no_states, N.guarantee_[0]->no_states_, N.guarantee_[1]->no_states_, k, elapsed_time_wo_minimization);
+        }
+    }
+    
 
     return 1;
 }

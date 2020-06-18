@@ -15,13 +15,13 @@
  #include "Component.hpp" /* for the definition of the data type abs_type */
 
  /* The parameters */
- #define pr1_data_size_ 4
- #define pr1_max_period_ 4
- #define pr1_deadline_ 25
+ #define pr1_data_size_ 6
+ #define pr1_max_period_ 3
+ #define pr1_deadline_ 20
 
- #define pr2_data_size_ 1
- #define pr2_max_period_ 4
- #define pr2_deadline_ 6
+ #define pr2_data_size_ 4
+ #define pr2_max_period_ 2
+ #define pr2_deadline_ 10
 
 using namespace std;
 using namespace negotiation;

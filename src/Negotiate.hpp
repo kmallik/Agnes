@@ -81,10 +81,20 @@ public:
             guarantee_.push_back(s);
         }
     }
+    /* resets the guarantees */
+    void reset(){
+        guarantee_.clear();
+        for (int c=0; c<2; c++) {
+            negotiation::SafetyAutomaton* s=new negotiation::SafetyAutomaton(components_[c]->no_outputs);
+            guarantee_.push_back(s);
+        }
+    }
     /*! Perform a negotiation by progrssively increasing the length of spoiling behaviors.
      *  \param[in] starting_component   the index of the component which starts the negotation process (default is 0)
-     *  \param[out] k   the depth reached. When k>max_depth_, then this indicates that the negotiation has failed. */
+     *  \param[out] k   the output flag: k=-1 no contract exists, 0<= k <= k_max negotiation successful, k > k_max negotitation was inconclusive (no contract found, but contract might exist for higher value of k_max). */
     int iterative_deepening_search(int starting_component=0) {
+        /* first clear the existing guarantees if any */
+        reset();
         /* initialize the length of spoiling behavior set */
         int k=0;
         /* for warm-starting the negotiation process by the initially computed spoilers for the starting component */
@@ -120,7 +130,7 @@ public:
             /* stop when the k-minimization gets saturated */
             if (saturated) {
                 std::cout << "Search got saturated in the depth of spoiling behavior. No solution exists. Terminating." << '\n';
-                return k;
+                return -1;
             } else {
                 saturated=true;
             }
@@ -171,6 +181,78 @@ public:
                 k++;
             }
         }
+    }
+    /*! Perform a negotiation by progrssively increasing the length of spoiling behaviors.
+     *  \param[in] k   the depth reached. When k>max_depth_, then this indicates that the negotiation has failed.
+     *  \param[in] starting_component   the index of the component which starts the negotation process (default is 0)
+     *  \param[out] output_flag     0- no contract exists, 1- negotiation inconclusive (contract might exist for higher value of k), 2- negotiation successful. */
+    int fixed_depth_search(int k, int starting_component=0) {
+        /* first clear the existing guarantees if any */
+        reset();
+        /* output flag */
+        int output_flag;
+        /* for warm-starting the negotiation process by the initially computed spoilers for the starting component */
+        negotiation::SafetyAutomaton* s_init = new negotiation::SafetyAutomaton();
+        std::cout << "\n\nInitiating pre-computation of spoilers for the starting component " << starting_component << "\n";
+        int init_winning = compute_spoilers_overall(starting_component,s_init);
+        /* if the game is losing for the starting component, then change the starting component and try again */
+        if (init_winning==0) {
+            std::cout << "\tThe game is sure losing for component " << starting_component << ".\n";
+            /* flip the starting component and compute the spoiling behavior */
+            starting_component=1-starting_component;
+            std::cout << "Initiating pre-computation of spoilers for the new starting component " << starting_component << "\n";
+            std::cout << "\tComputing spoiler for component " << starting_component << ".\n";
+            init_winning=compute_spoilers_overall(starting_component,s_init);
+            if(init_winning==0) {
+                std::cout << "The game is sure losing for both components. Negotiation is not possible. Terminating.\n";
+                return k;
+            }
+        }
+        /* save debug info */
+        if (verbose_>1) {
+            s_init->writeToFile("Outputs/spoiler.txt");
+        }
+        /* variable for checking saturation of the k-minimization */
+        bool saturated=false;
+        /* flag for checking success */
+        bool success;
+        if (init_winning==2) {
+            /* the initial component is sure winning, so start with the other component, and noting that one of the components is winning */
+            std::cout << "\tThe game is sure winning for component " << starting_component << "." << '\n';
+            success = recursive_negotiation(k,1-starting_component,1,saturated);
+        } else {
+            /* find the spoilers for the starting_component upto the current depth, and update the current set of assumptions and guarantees */
+            std::cout << "\tCompressing spoilers for component " << starting_component << "." << '\n';
+            /* object for minimizing the spoiling behaviors */
+            negotiation::Spoilers spoiler(s_init);
+            /* minimize spoilers */
+            spoiler.boundedBisim(k);
+            /* check saturation */
+            if (spoiler.k_==k && saturated) {
+                saturated=false;
+            }
+            /* determinize the minimized spoiler automaton */
+            spoiler.spoilers_mini_->determinize();
+            /* minimize the guarantee automaton further before saving */
+            negotiation::Spoilers guarantee_final(spoiler.spoilers_mini_);
+            guarantee_final.boundedBisim();
+            /* update the guarantee required from the other component */
+            *guarantee_[1-starting_component]=*guarantee_final.spoilers_mini_;
+            /* save debug info */
+            if (verbose_>1) {
+                guarantee_[0]->writeToFile("Outputs/guarantee_0.txt");
+                guarantee_[1]->writeToFile("Outputs/guarantee_1.txt");
+            }
+            success = recursive_negotiation(k,1-starting_component,0,saturated);
+        }
+        if (success) {
+            output_flag=2;
+        } else if (saturated) {
+            output_flag=0;
+        } else {
+            output_flag=1;
+        }
+        return output_flag;
     }
     /*! Perform negotiation recursively with fixed length of spoiling behavior.
      * \param[in] k         prescribed length of the spoiling behavior set.
