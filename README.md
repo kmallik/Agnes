@@ -57,22 +57,22 @@ If you want to use Agnes to synthesize controllers for your own distributed synt
     
 2. The distributed synthesis problem can be solved by writing a C++ program that executes the following instructions:
     
-    > negotiation::Negotiate negotiation_object(systems, safe_states, target_states, k_max);\
-    > int k = negotiation_object.iterative_deepening_search();
+        negotiation::Negotiate negotiation_object(systems, safe_states, target_states, k_max);
+        int k = negotiation_object.iterative_deepening_search();
     
    where `systems` is a vector that contains the system file names `system_0.txt` and `system_1.txt`, `safe_states` is a vector that contains the filenames `safe_states_0.txt` and `safe_states_.txt` specifying the safe states, `target_states` is a vector that contains the filenames `target_states_0.txt` and `target_states_1.txt` specifying the target states, `k_max` is an optional argument specifying the maximum length of the patterns used for under-approximaing the contracts (see the EMSOFT paper), and `k` is the actual length of pattern (not greater than `k_max`) for which a solution could be found.
    
 3. The output can be stored by executing the following isntructions:
 
-    > negotiation_object.guarantee_[0]->writeToFile('guarantee_0.txt');\
-    > negotiation_object.guarantee_[1]->writeToFile('guarantee_1.txt');
+        negotiation_object.guarantee_[0]->writeToFile('guarantee_0.txt');
+        negotiation_object.guarantee_[1]->writeToFile('guarantee_1.txt');
     
    This will save the guarantee of each individual system (same as the assumption of the other system) in text files in the form of prefix-closed deterministic finite automata over the output alphabet of the respective system.
 
 4. If Graphviz is installed, the guarantees can be additionally visualized for convenience. For this, the following instructions need to be executed in the C++ program:
 
-    > negotiation_object.guarantee_[0]->createDOT('file_0.gv', 'guarantee_automaton_0.txt', list_output_labels_1);\
-    > negotiation_object.guarantee_[1]->createDOT('file_1.gv', 'guarantee_automaton_1.txt', list_output_labels_0);
+        negotiation_object.guarantee_[0]->createDOT('file_0.gv', 'guarantee_automaton_0.txt', list_output_labels_1);
+        negotiation_object.guarantee_[1]->createDOT('file_1.gv', 'guarantee_automaton_1.txt', list_output_labels_0);
     
    where `list_output_labels_i` for `i \in {0,1}` are the sets of string labels assigned to the outputs of the i-th system. The above instructions will create the files `file_0.gv` and `file_1.gv`, so that running 'dot' on these files would create the visualizations the two guarantee automata in desired format; see the Graphviz 'dot' documentation for details of the usage (https://www.graphviz.org/pdf/dotguide.pdf).
 
@@ -84,14 +84,14 @@ We presented two experiments in our EMSOFT 2020 paper: (a) a paramterized versio
    2. Use the command line to navigate to the folder `<Agnes root>/examples/EXAMPLE-parameterized/EXAMPLE-generate/`.
    3. Execute the following instructions to create a specific instance of the example for the specified parameters:
     
-    > make clean\
-    > make\
-    > ./EXAMPLE-generate
+    make clean
+    make
+    ./EXAMPLE-generate
     
    4. In the command line, navigate to the newly created folder `<Agnes root>/examples/EXAMPLE-parameterized/EXAMPLE_<parameter values>/`. Execute the following instructions to solve the synthesis problem:
    
-    > make clean\
-    > make\
-    > ./EXAMPLE
+    make clean
+    make
+    ./EXAMPLE
     
    This will also append the results to the log files `<Agnes root>/examples/EXAMPLE-parameterized/results_iterative_search.log` and `<Agnes root>/examples/EXAMPLE-parameterized/results_plain_negotiation.log`, which contain respectively the results of the negotiation when the pattern-based under-approximation heuristic was enabled to minimize the size of the contracts, and when the same was disabled.
