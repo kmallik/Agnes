@@ -19,9 +19,9 @@ Agnes is written in header-only library style. You only need to add the Agnes so
 
 In the repository, you will find the following directory structure:
 
-- './src/' Contains the C++ source code.
-- './doc/' The doxygen configuration file for automatically generating a documentation (requires Doxygen).
-- './examples/' Several examples.
+- `./src/` Contains the C++ source code.
+- `./doc/` The doxygen configuration file for automatically generating a documentation (requires Doxygen).
+- `./examples/` Several examples.
 
 # How to Use
 
