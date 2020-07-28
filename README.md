@@ -74,7 +74,7 @@ If you want to use Agnes to synthesize controllers for your own distributed synt
         negotiation_object.guarantee_[0]->createDOT('file_0.gv', 'guarantee_automaton_0.txt', list_output_labels_1);
         negotiation_object.guarantee_[1]->createDOT('file_1.gv', 'guarantee_automaton_1.txt', list_output_labels_0);
     
-   where `list_output_labels_i` for `$i \in {0,1}$` are the sets of string labels assigned to the outputs of the i-th system. The above instructions will create the files `file_0.gv` and `file_1.gv`, so that running 'dot' on these files would create the visualizations the two guarantee automata in desired format; see the Graphviz 'dot' documentation for details of the usage (https://www.graphviz.org/pdf/dotguide.pdf).
+   where `list_output_labels_i` for `i ∈ {0,1}` are the sets of string labels assigned to the outputs of the i-th system. The above instructions will create the files `file_0.gv` and `file_1.gv`, so that running 'dot' on these files would create the visualizations the two guarantee automata in desired format; see the Graphviz 'dot' documentation for details of the usage (https://www.graphviz.org/pdf/dotguide.pdf).
 
 ## Instructions for Repeating the Experiments from Our EMSOFT 2020 Paper
 
