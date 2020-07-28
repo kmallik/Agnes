@@ -83,15 +83,14 @@ We presented two experiments in our EMSOFT 2020 paper: (a) a paramterized versio
    1. Let us use the variable `EXAMPLE` to denote the respective example: For Table I, `EXAMPLE=mutex` and for Table II, `EXAMPLE=factory`. Open `<Agnes root>/examples/EXAMPLE-parameterized/EXAMPLE-generate/EXAMPLE-generate.cpp` and adjust the parameters.
    2. Use the command line to navigate to the folder `<Agnes root>/examples/EXAMPLE-parameterized/EXAMPLE-generate/`.
    3. Execute the following instructions to create a specific instance of the example for the specified parameters:
-    
-    make clean
-    make
-    ./EXAMPLE-generate
+   
+                make clean
+                make
+                ./EXAMPLE-generate
     
    4. In the command line, navigate to the newly created folder `<Agnes root>/examples/EXAMPLE-parameterized/EXAMPLE_<parameter values>/`. Execute the following instructions to solve the synthesis problem:
    
-    make clean
-    make
-    ./EXAMPLE
-    
-   This will also append the results to the log files `<Agnes root>/examples/EXAMPLE-parameterized/results_iterative_search.log` and `<Agnes root>/examples/EXAMPLE-parameterized/results_plain_negotiation.log`, which contain respectively the results of the negotiation when the pattern-based under-approximation heuristic was enabled to minimize the size of the contracts, and when the same was disabled.
+                make clean
+                make
+                ./EXAMPLE
+         This will also append the results to the log files `<Agnes root>/examples/EXAMPLE-parameterized/results_iterative_search.log` and `<Agnes root>/examples/EXAMPLE-parameterized/results_plain_negotiation.log`, which contain respectively the results of the negotiation when the pattern-based under-approximation heuristic was enabled to minimize the size of the contracts, and when the same was disabled.
