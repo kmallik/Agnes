@@ -1,6 +1,6 @@
 # Agnes
 
-Agnes is a tool for solving the distributed reactive synthesis problem. While the problem at hand is undecidable in general, Agnes promises to provide a sound but incomplete solution. The core underlying theory of Agnes can be found in our EMSOFT '20 paper.
+Agnes is a tool for solving the distributed reactive synthesis problem. While the problem at hand is undecidable in general, Agnes promises to provide a sound but incomplete solution. The core underlying theory of Agnes can be found in our EMSOFT '20 paper; a preprint version is available in the following link: https://people.mpi-sws.org/~kmallik/uploads/AGDistSynth2020.pdf. To cite Agnes, please cite our EMSOFT '20 paper.
 
 Right now, Agnes is in its nascent stage: It can only support very simple architecture (two systems connected in feedback) with a restriction on the class of specifications (safety and deterministic Büchi).
 
@@ -28,7 +28,9 @@ In the repository, you will find the following directory structure:
 
 - `./src/` Contains the C++ source code.
 - `./doc/` The doxygen configuration file for automatically generating a documentation (requires Doxygen).
-- `./examples/` Several examples.
+- `./examples/factory-parameterized` The parameterized tandem queuing netowork example from our EMSOFT 2020 paper.
+- `./examples/mutex-parameterized` The parameterized distributed packet sending example from our EMSOFT 2020 paper.
 
 ## How to Use
 
+Coming soon.
