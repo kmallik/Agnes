@@ -21,14 +21,14 @@ class TicToc {
     TicToc(){};
     ~TicToc(){};
 
-    /* function: tic 
-     * set start time 
+    /*!
+     * Set start time
      */
     inline void tic(void) {
       start=std::chrono::high_resolution_clock::now();
     }
-    /* function: toc 
-     * set stop time and print out elapsed time since last call of tic()
+    /*!
+     * Set stop time and print out elapsed time since last call of tic()
      */
     inline double toc(void) {
       stop=std::chrono::high_resolution_clock::now();

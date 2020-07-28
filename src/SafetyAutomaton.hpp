@@ -35,7 +35,8 @@ public:
     /** @brief post set: post[(i-1)*P+j] contains the list of posts for state i and dist_input j **/
     std::unordered_set<abs_type>** post_;
 public:
-    /* copy constructor */
+    /*! Copy constructor
+     * \param[in] other   The safety automaton whose attribues are to be copied*/
     SafetyAutomaton(const SafetyAutomaton& other) {
         no_states_=other.no_states_;
         init_=other.init_;
@@ -74,8 +75,8 @@ public:
         delete[] post;
     }
     /*! Constructor: product of two safety automata
-     * \param[in] A1      the first safety automaton
-     * \param[in] A2      the second safety automaton
+     * \param[in] A1      The first safety automaton
+     * \param[in] A2      The second safety automaton
      * NOTE: If the transitions of automata A1 and A2 are not complete, then we redirect the missing transitions to the rejecting sink state 0. */
     SafetyAutomaton(const negotiation::SafetyAutomaton& A1,
                  const negotiation::SafetyAutomaton& A2) {
@@ -154,7 +155,8 @@ public:
         addPost(post);
         delete[] post;
     }
-    /*! the equality operator creates new array for post_ */
+    /*! The equality operator for equating two safety automata
+     * \param[in] other   The safety automata from the right hand side*/
     SafetyAutomaton& operator=(const SafetyAutomaton& other) {
         no_states_=other.no_states_;
         init_=other.init_;
@@ -167,7 +169,8 @@ public:
         }
         return *this;
     }
-    /* read description of states and transitions from files */
+    /*! Read description of states and transitions from files
+     * \param[in] filename    The name of the file which contains the encoding of the safety automaton*/
     void readFromFile(const string& filename) {
         int result = readMember<abs_type>(filename, no_states_, "NO_STATES");
         abs_type ni;
@@ -193,11 +196,11 @@ public:
             }
         }
     }
-    /* Destructor */
+    /*! Destructor */
     ~SafetyAutomaton() {
         delete[] post_;
     }
-    /* reset post */
+    /*! Reset post */
     void resetPost() {
         delete[] post_;
     }
@@ -413,7 +416,10 @@ public:
     inline int addr(const abs_type i, const abs_type j) const {
         return (i*no_inputs_ + j);
     }
-    /*! Save the description of the safety automaton as a directed graph */
+    /*! Save the description of the safety automaton as a directed graph
+     * \param[in] filename    The name of the output file
+     * \param[in] graph_name  The name of the graph
+     * \param[in] dist_input_labels   The labels to the disturbance inputs*/
     void createDOT(const std::string& filename,
                     const std::string& graph_name,
                     const std::vector<std::string*> dist_input_labels) {
@@ -472,7 +478,10 @@ public:
         createDiGraph<abs_type>(filename, graph_name, state_labels, init_, edge_labels, post_new);
     }
 private:
-    /* intersect two sets */
+    /*! Intersect two sets
+     * \param[in] s1    The first set
+     * \param[in] s2    The second set
+     * \param[out] s    The set that contains all the elements which are both in s1 and in s2*/
     template<class T>
     std::unordered_set<T> setIntersect(const std::unordered_set<T>& s1, const std::unordered_set<T>& s2) {
         std::unordered_set<T> s;
@@ -484,7 +493,10 @@ private:
         }
         return s;
     }
-    /* union two sets */
+    /*! Union two sets
+     * \param[in] s1    The first set
+     * \param[in] s2    The second set
+     * \param[in] s       The set that contains all the elements which are either in s1 or in s2*/
     template<class T>
     std::vector<T> setUnion(const std::unordered_set<T>& s1, const std::unordered_set<T>& s2) {
         std::vector<T> s=s1;

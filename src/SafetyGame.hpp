@@ -21,6 +21,10 @@ using namespace std;
  */
 class SafetyGame: public Monitor {
 public:
+    /*! Constructor
+     * \param[in] comp    The component
+     * \param[in] assume  A safety automaton representing the current assumptions
+     * \param[in] guarantee A safety automaton representing the current guarantees */
     SafetyGame(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee) : Monitor(comp, assume, guarantee) {}
     /*! Solve safety game.
      *  The algorithm is taken from: https://gitlab.lrz.de/matthias/SCOTSv0.2/raw/master/manual/manual.pdf

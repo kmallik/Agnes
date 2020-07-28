@@ -32,6 +32,11 @@
      }
  }
 
+/*! Read a member from a file. (A member is an attribute whose value is a scalar.)
+ * \param[in] filename  Name of the file
+ * \param[in] member_value  Reference to the variable that will contain the read member value
+ * \param[in] member_name     The name of the member whose value is to be read
+ * \param[out] out_flag          A flag that is 0 when reading was unsuccessful, and is 1 when reading was successful*/
 template<class T>
 int readMember(const std::string& filename, T& member_value, const std::string& member_name) {
     std::ifstream file;
@@ -74,7 +79,12 @@ int readMember(const std::string& filename, T& member_value, const std::string& 
     }
 }
 
-/* read 1-dimensional integer vector from file */
+/*! Read 1-dimensional vector from file
+ * \param[in] filename  Name of the file
+ * \param[in] v                  Reference to the vector that will contain the read vector value
+ * \param[in] no_elem     The size of the vector
+ * \param[in] vec_name     The name of the vector whose value is to be read
+ * \param[out] out_flag          A flag that is 0 when reading was unsuccessful, and is 1 when reading was successful*/
 template<class T>
 int readVec(const std::string& filename, std::vector<T>& v, size_t no_elem, const std::string& vec_name) {
     std::ifstream file;
@@ -129,7 +139,12 @@ int readVec(const std::string& filename, std::vector<T>& v, size_t no_elem, cons
     }
 }
 
-/* read vector of pointers from file */
+/*! Read vector of pointers from file
+ * \param[in] filename  Name of the file
+ * \param[in] v                  Reference to the vector that will contain the read vector value
+ * \param[in] no_elem     The size of the vector
+ * \param[in] vec_name     The name of the vector whose value is to be read
+ * \param[out] out_flag          A flag that is 0 when reading was unsuccessful, and is 1 when reading was successful*/
 template<class T>
 int readVec(const std::string& filename, std::vector<T*>& v, size_t no_elem, const std::string& vec_name) {
     std::ifstream file;
@@ -184,7 +199,12 @@ int readVec(const std::string& filename, std::vector<T*>& v, size_t no_elem, con
     }
 }
 
-/* read 1-dimensional integer set (unordered) from file */
+/*! Read 1-dimensional integer set (unordered) from file
+ * \param[in] filename  Name of the file
+ * \param[in] s                  Reference to the set that will contain the read set value
+ * \param[in] no_elem     The size of the set
+ * \param[in] set_name     The name of the set whose value is to be read
+ * \param[out] out_flag          A flag that is 0 when reading was unsuccessful, and is 1 when reading was successful*/
 template<class T>
 int readSet(const std::string& filename, std::unordered_set<T>& s, size_t no_elem, const std::string& set_name) {
     std::ifstream file;
@@ -239,7 +259,12 @@ int readSet(const std::string& filename, std::unordered_set<T>& s, size_t no_ele
     }
 }
 
-/* read vector of integer array (can be thought of as a 2-d table) from file */
+/*! Read vector of arrays (can be thought of as a 2-d table) from file
+ * \param[in] filename  Name of the file
+ * \param[in] v                  Reference to the vector that will contain the read vector value
+ * \param[in] no_elem     The size of the vector
+ * \param[in] vec_name     The name of the vector whose value is to be read
+ * \param[out] out_flag          A flag that is 0 when reading was unsuccessful, and is 1 when reading was successful*/
 template<class T, std::size_t SIZE>
 int readVecArr(const std::string& filename, std::vector<std::array<T,SIZE>>& v, size_t no_elem, const std::string& vec_name) {
     std::ifstream file;
@@ -298,7 +323,12 @@ int readVecArr(const std::string& filename, std::vector<std::array<T,SIZE>>& v, 
     }
 }
 
-/* read vector of pointers to unordered sets (can be thought of as a 2-d table) from file */
+/*! Read vector of pointers to unordered sets (can be thought of as a 2-d table) from file
+ * \param[in] filename  Name of the file
+ * \param[in] vec             Reference to the vector that will contain the read vector value
+ * \param[in] no_elem     The size of the vector
+ * \param[in] vec_name     The name of the vector whose value is to be read
+ * \param[out] out_flag          A flag that is 0 when reading was unsuccessful, and is 1 when reading was successful*/
 template<class T>
 int readVecSet(const std::string& filename, std::vector<std::unordered_set<T>*>& vec, size_t no_elem, const std::string& vec_name) {
     std::ifstream file;
@@ -354,7 +384,12 @@ int readVecSet(const std::string& filename, std::vector<std::unordered_set<T>*>&
     }
 }
 
-/* read array of vectors (can be thought of as a 2-d table) from file */
+/*! Read array of vectors (can be thought of as a 2-d table) from file
+ * \param[in] filename  Name of the file
+ * \param[in] arr             Pointer to the pre-alocated array that will contain the read array value
+ * \param[in] no_elem     The size of the array
+ * \param[in] array_name     The name of the array whose value is to be read
+ * \param[out] out_flag          A flag that is 0 when reading was unsuccessful, and is 1 when reading was successful*/
 template<class T>
 int readArrVec(const std::string& filename, std::vector<T>** arr, size_t no_elem, const std::string& arr_name) {
     std::ifstream file;
@@ -407,7 +442,12 @@ int readArrVec(const std::string& filename, std::vector<T>** arr, size_t no_elem
         }
     }
 }
-/* read array of unordered sets (can be thought of as a 2-d table) from file */
+/*! Read array of unordered sets (can be thought of as a 2-d table) from file
+ * \param[in] filename  Name of the file
+ * \param[in] arr             Pointer to the array that will contain the read array value
+ * \param[in] no_elem     The size of the array
+ * \param[in] arr_name     The name of the array whose value is to be read
+ * \param[out] out_flag          A flag that is 0 when reading was unsuccessful, and is 1 when reading was successful*/
 template<class T>
 int readArrSet(const std::string& filename, std::unordered_set<T>** arr, size_t no_elem, const std::string& arr_name) {
     std::ifstream file;
@@ -460,7 +500,8 @@ int readArrSet(const std::string& filename, std::unordered_set<T>** arr, size_t 
         }
     }
 }
-/* create a file OR erase previous data written to a file */
+/*! Create a file OR erase previous data written to a file
+ * \param[in] filename  The name of the file*/
 void create(const std::string& filename) {
     std::ofstream file;
     file.open(filename, std::ofstream::out | std::ofstream::trunc);
@@ -469,6 +510,11 @@ void create(const std::string& filename) {
     }
 }
 /* some functions for writing data to file */
+/*! Write a member to a file. (A member is an attribute whose value is a scalar.)
+ * \param[in] filename  Name of the file
+ * \param[in] member_name     The name of the member
+ * \param[in] member_value   The value of the member
+ * \param[in] mode                     [Optional] The writing mode: "a" for append, "w" for write/overwrite. Default="a".*/
 template<class T>
 void writeMember(const std::string& filename, const std::string& member_name, T member_value, const char* mode="a") {
     std::ofstream file;
@@ -497,7 +543,11 @@ void writeMember(const std::string& filename, const std::string& member_name, T 
     }
 }
 
-/* write 1-dimensional integer vector to file */
+/*! Write 1-dimensional integer vector to file
+ * \param[in] filename  Name of the file
+ * \param[in] vec_name     The name of the vector to be written
+ * \param[in] v                     The vector
+ * \param[in] mode              [Optional] The writing mode: "a" for append, "w" for write/overwrite. Default="a".*/
 template<class T>
 void writeVec(const std::string& filename, const std::string& vec_name, std::vector<T>& v, const char* mode="a") {
     std::ofstream file;
@@ -527,7 +577,11 @@ void writeVec(const std::string& filename, const std::string& vec_name, std::vec
     }
 }
 
-/* write 1-dimensional vector of pointers to file */
+/*! Write 1-dimensional vector of pointers to file
+ * \param[in] filename  Name of the file
+ * \param[in] vec_name     The name of the vector
+ * \param[in] v                    The vector
+ * \param[in] mode             [Optional] The writing mode: "a" for append, "w" for write/overwrite. Default="a".*/
 template<class T>
 void writeVec(const std::string& filename, const std::string& vec_name, std::vector<T*>& v, const char* mode="a") {
     std::ofstream file;
@@ -557,7 +611,11 @@ void writeVec(const std::string& filename, const std::string& vec_name, std::vec
     }
 }
 
-/* write 1-dimensional integer set (unordered) to file */
+/*! Write 1-dimensional integer set (unordered) to file
+ * \param[in] filename  Name of the file
+ * \param[in] set_name     The name of the set
+ * \param[in] s                    The set
+ * \param[in] mode              [Optional] The writing mode: "a" for append, "w" for write/overwrite. Default="a".*/
 template<class T>
 void writeSet(const std::string& filename, const std::string& set_name, std::unordered_set<T>& s, const char* mode="a") {
     std::ofstream file;
@@ -587,7 +645,11 @@ void writeSet(const std::string& filename, const std::string& set_name, std::uno
     }
 }
 
-/* write array of vectors (can be thought of as a 2-d table) from file */
+/*! Write array of vectors (can be thought of as a 2-d table) from file
+ * \param[in] filename  Name of the file
+ * \param[in] arr_name     The name of the array
+ * \param[in] arr                The array
+ * \param[in] mode              [Optional] The writing mode: "a" for append, "w" for write/overwrite. Default="a".*/
 template<class T>
 void writeArrVec(const std::string& filename, const std::string& arr_name, std::vector<T>** arr, size_t no_elem, const char* mode="a") {
     std::ofstream file;
@@ -624,7 +686,11 @@ void writeArrVec(const std::string& filename, const std::string& arr_name, std::
     }
 }
 
-/* write array of unordered sets (can be thought of as a 2-d table) to file */
+/*! Write array of unordered sets (can be thought of as a 2-d table) to file
+ * \param[in] filename  Name of the file
+ * \param[in] arr_name     The name of the array
+ * \param[in] arr                 The array
+ * \param[in] mode                [Optional] The writing mode: "a" for append, "w" for write/overwrite. Default="a".*/
 template<class T>
 void writeArrSet(const std::string& filename, const std::string& arr_name, std::unordered_set<T>** arr, size_t no_elem, const char* mode="a") {
     std::ofstream file;
@@ -661,7 +727,11 @@ void writeArrSet(const std::string& filename, const std::string& arr_name, std::
     }
 }
 
-/* write vector of references to unordered sets (can be thought of as a 2-d table) to file */
+/*! Write vector of references to unordered sets (can be thought of as a 2-d table) to file
+ * \param[in] filename  Name of the file
+ * \param[in] vec_name     The name of the vector
+ * \param[in] vec                The vector
+ * \param[in] mode                     [Optional] The writing mode: "a" for append, "w" for write/overwrite. Default="a".*/
 template<class T>
 void writeVecSet(const std::string& filename, const std::string& vec_name, std::vector<std::unordered_set<T>*> vec, const char* mode="a") {
     std::ofstream file;

@@ -38,7 +38,12 @@ public:
     /** @brief verbosity level between 0 (not verbose) to 2 (debug level verbose) **/
     const int verbose_;
 public:
-    /* constructor */
+    /*! Constructor
+     * \param[in] component_files   A vector containing the names of all the files which contain the encodings of the components
+     * \param[in] safe_states_files   A vector containing the names of the files which contain the list of the safe states of the components
+     * \param[in] target_states_files   A vector containing the names of the files which contain the list of the target states of the components
+     * \param[in] max_depth              [Optional] The maximum length to be used in the minimization heuristic for the contracts (see our EMSOFT 2020 paper). Default value=infinity (minimization disabled).
+     * \param[in] verbose                   [Optional] Verbosity 0 to 2. Default value=0.*/
     Negotiate(const std::vector<std::string*> component_files,
               const std::vector<std::string*> safe_states_files,
               const std::vector<std::string*> target_states_files,
@@ -81,7 +86,7 @@ public:
             guarantee_.push_back(s);
         }
     }
-    /* resets the guarantees */
+    /*! Resets the guarantees */
     void reset(){
         guarantee_.clear();
         for (int c=0; c<2; c++) {
@@ -409,7 +414,7 @@ public:
         return out_flag;
     }
 private:
-    /* find the smallest element in a given set */
+    /*! Find the smallest element in a given set */
     template <class T>
     T smallest_element(const std::unordered_set<T>& set) {
         T elem = *set.begin();

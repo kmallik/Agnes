@@ -58,7 +58,7 @@ public:
     /** @brief post array: the index ( i*M*P + j*P + k ) holds the list of post states for the (state,control,disturbance,post_state)  tuple (i,j,k), where i, j, k start from 0,..**/
     std::vector<abs_type>** post;
 public:
-    /* copy constructor */
+    /*! Copy constructor */
     Component(const Component& other) {
         no_states=other.no_states;
         init_=other.init_;
@@ -73,7 +73,7 @@ public:
             post[i]=other.post[i];
         }
     }
-    /* Destructor */
+    /*! The destructor */
     ~Component() {
         abs_type no_elems = no_states*no_control_inputs*no_dist_inputs;
         for (abs_type i=0; i<no_elems; i++) {
@@ -81,7 +81,9 @@ public:
         }
     }
     /* @endcond */
-    /* constructor */
+    /*!
+     *  The constructor takes as input the name of the file that contains the encoding of the component members.
+     */
     Component(const string& filename) {
         int result = readMember<abs_type>(filename, no_states, "NO_STATES");
         abs_type ni;
@@ -128,7 +130,13 @@ public:
     inline abs_type cont_ind(const abs_type l) {
         return (l / no_dist_inputs);
     }
-    /*! Save the description of the safety automaton as a directed graph with clusterd vertices */
+    /*! Save the description of the safety automaton as a directed graph with clusterd vertices
+     * \param[in] filename      the output file name
+     * \param[in] graph_name  the name of the graph
+     * \param[in] state_labels  the labels to the state which will appear in the visualization (the size must be same as the number of states)
+     * \param[in] state_clusters  the groups of states which should appear close to each other (possibly for better visualization)
+     * \param[in] control_input_labels the labels to the control inputs which will appear in the visualization (the size must be same as the number of control inputs)
+     * \param[in] dist_input_labels the labels to the disturbance inputs which will appear in the visualization (the size must be same as the number of disturbance inputs) */
     void createDOT(const std::string& filename,
                     const std::string& graph_name,
                     const std::vector<std::string*> state_labels,
@@ -260,7 +268,12 @@ public:
 
         delete[] post_array;
     }
-    /*! Save the description of the safety automaton as a simple directed graph  without any clusters of vertices*/
+    /*! Save the description of the safety automaton as a simple directed graph  without any clusters of vertices
+     * \param[in] filename      the output file name
+     * \param[in] graph_name  the name of the graph
+     * \param[in] state_labels  the labels to the state which will appear in the visualization (the size must be same as the number of states)
+     * \param[in] control_input_labels the labels to the control inputs which will appear in the visualization (the size must be same as the number of control inputs)
+     * \param[in] dist_input_labels the labels to the disturbance inputs which will appear in the visualization (the size must be same as the number of disturbance inputs)*/
     void createDOT(const std::string& filename,
                     const std::string& graph_name,
                     const std::vector<std::string*> state_labels,
@@ -271,7 +284,10 @@ public:
         createDOT(filename, graph_name, state_labels, state_clusters, control_input_labels, dist_input_labels);
     }
 private:
-    /* union two vectors */
+    /*! Compute union of two vectors
+     * \param[in] v1  the first vector
+     * \param[in] v2  the second vector
+     * \param[out] v  the output vector which contains all the elements that appear in either v1 or v2 */
     template<class T>
     std::vector<T> vecUnion(const std::vector<T>& v1, const std::vector<T>& v2) {
         std::vector<T> v=v1;
@@ -290,7 +306,10 @@ private:
         }
         return v;
     }
-    /* intersect two vectors */
+    /*! Compute intersection of two vectors
+     * \param[in] v1  the first vector
+     * \param[in] v2  the second vector
+     * \param[out] v  the output vector which contains all the elements that appear in both v1 or v2*/
     template<class T>
     std::vector<T> vecIntersect(const std::vector<T>& v1, const std::vector<T>& v2) {
         std::vector<T> v;
@@ -305,7 +324,10 @@ private:
         }
         return v;
     }
-    /* union two sets */
+    /*! Compute union of two unordered sets
+     * \param[in] s1  the first set
+     * \param[in] s2  the second set
+     * \param[out] s  the output set which contains all the elements that appear in either s1 or s2*/
     template<class T>
     std::vector<T> setUnion(const std::unordered_set<T>& s1, const std::unordered_set<T>& s2) {
         std::vector<T> s=s1;

@@ -34,7 +34,8 @@ public:
     /** @brief partitions which are fully refined so far **/
     std::unordered_set<abs_type> refined_partitions_;
 public:
-    /* constructor */
+    /*! Constructor
+     * \param[in] full  The original safety automaton that is to be minimized (see our EMSOFT 2020 paper for the minimization heuristic)*/
     Spoilers(SafetyAutomaton* full) {
         /* initially the minimization level is 0 */
         k_=0;
@@ -66,7 +67,7 @@ public:
         /* the partitions which have been refined completely so far */
         refined_partitions_.insert(0);
     }
-    /*! Recompute the transitions of the minimized safety automaton from the full safety automaton */
+    /*! Recompute the transitions of the minimized safety automaton from the original safety automaton */
     void computeMiniTransitions() {
         /* create new post array for spoilers_mini_ */
         abs_type ns=spoilers_mini_->no_states_;
@@ -297,7 +298,10 @@ public:
         }
     }
     private:
-        /* set difference s1\s2 */
+        /*! Compute set difference of two sets
+         * \param[in] s1    The first set
+         * \param[in] s2    The second set
+         * \param[out] s    The set that contains all the elements which are in s1 but not in s2*/
         template<class T>
         std::unordered_set<T> setDifference(const std::unordered_set<T>& s1, const std::unordered_set<T>& s2) {
             std::unordered_set<T> s;

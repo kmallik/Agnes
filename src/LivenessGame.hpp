@@ -27,7 +27,7 @@ public:
     std::unordered_set<abs_type> monitor_target_states_;
     /*! Obstacle states for the liveness/reachability specification */
     std::unordered_set<abs_type> monitor_avoid_states_;
-    /*! constructor
+    /*! Constructor
      *
      * \param[in] comp          the component
      * \param[in] assume      the assumption safety automaton
@@ -58,7 +58,7 @@ public:
         /* avoid state: the guarantee violation */
         monitor_avoid_states_.insert(1);
     }
-    /*! constructor
+    /*! Constructor
      *
      * \param[in] monitor_other             another monitor
      * \param[in] component_target_states   set of component target states
@@ -385,7 +385,7 @@ public:
         }
         return live_win;
     }
-    /*! compute the set of spoiling behaviors in the form of a safety automaton.
+    /*! Compute the set of spoiling behaviors in the form of a safety automaton.
      * \param[in] spoilers          pointer to the safety automaton saving the spoiling behaviors
      * \param[out] out_flag        0 -> some initial states are sure losing, 2 -> all initial states are sure winning, 1-> otherwise. */
     int find_spoilers(negotiation::SafetyAutomaton* spoilers) {

@@ -51,7 +51,8 @@ public:
     /** @brief a guard flag that tells whether the monitor state indices were relabeled **/
     bool monitor_states_were_relabeled;
 public:
-    /* copy constructor */
+    /*! Copy constructor
+     * \param[in] other   The monitor whose attributes are to be copied*/
     Monitor(const Monitor& other) {
         no_states=other.no_states;
         init_=other.init_;
@@ -83,17 +84,17 @@ public:
         no_post=other.no_post;
         monitor_states_were_relabeled=other.monitor_states_were_relabeled;
     }
-    /* Destructor */
+    /*! Destructor */
     ~Monitor() {
         delete[] pre;
         delete[] post;
     }
-    /* constructor: the allowed_inputs is a vector of allowed_inputs of the *monitor states* */
+    /*! Constructor: the allowed_inputs is a vector of allowed_inputs of the *monitor states* */
     Monitor(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee, std::vector<std::unordered_set<abs_type>*>& allowed_control_inputs, std::vector<std::unordered_set<abs_type>*>& allowed_joint_inputs) {
         initialize(comp, assume, guarantee);
         ComputeTransitions(comp, assume, guarantee, allowed_control_inputs, allowed_joint_inputs);
     }
-    /* constructor without allowed inputs */
+    /*! Constructor without allowed inputs */
     Monitor(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee) {
         initialize(comp, assume, guarantee);
         std::vector<std::unordered_set<abs_type>*> allowed_control_inputs, allowed_joint_inputs;
@@ -118,7 +119,7 @@ public:
         }
         ComputeTransitions(comp, assume, guarantee, allowed_control_inputs, allowed_joint_inputs);
     }
-    /* initialize all non-transition related members */
+    /*! Function to initialize all non-transition related members */
     void initialize(Component& comp, SafetyAutomaton& assume, SafetyAutomaton& guarantee) {
         /* sanity check */
         if (comp.no_dist_inputs != assume.no_inputs_) {
@@ -168,7 +169,7 @@ public:
         no_control_inputs=comp.no_control_inputs;
         no_dist_inputs=comp.no_dist_inputs;
     }
-    /* fill up the pre, post, and no_post arrays
+    /*! Fill up the pre, post, and no_post arrays
      * \param[in] comp      the component
      * \param[in] assume    the assumption safety automaton
      * \param[in] guarantee the guarantee safety automaton
@@ -289,7 +290,8 @@ public:
             }
         }
     }
-    /*! Compue the set of states reachable from the initial states */
+    /*! Compue the set of states reachable from the initial states
+     * \param[out] set  The set of state indices reachable from the initial states*/
     std::unordered_set<abs_type> compute_reachable_set() {
         /* the queue of states whose successors are to be explored */
         std::queue<abs_type> fifo;
@@ -513,8 +515,9 @@ public:
         }
     }
     /*! Membership querry for an unordered set.
-     *  \param[in] S     the unordered set
-     *  \param[in] e    the element */
+     *  \param[in] S     The unordered set
+     *  \param[in] e    The element
+     *  \param[out] out_flag  A boolean flag which is true when e is in S, and is false otherwise*/
     template<class T>
     bool isMember(const std::unordered_set<T>& S, const T& e) {
         typename std::unordered_set<T>::const_iterator it=S.find(e);
@@ -524,7 +527,8 @@ public:
             return true;
         }
     }
-    /*! (Over-)write the monitor automaton to a file */
+    /*! (Over-)write the monitor automaton to a file
+     * \param[in] filename  The output file name*/
     void writeToFile(const string& filename) {
         create(filename);
         writeMember(filename, "NO_STATES", no_states);
