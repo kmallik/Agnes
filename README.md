@@ -20,7 +20,9 @@ Right now, Agnes is in its nascent stage: It can only support very simple archit
   
   This requires the Doxygen tool to be installed first. This will create two subfolders `<Agnes root>/doc/html/` and `<Agnes root>/doc/latex/`, and the documentation can be opened in either of the following ways:
   + Open the file `<Agnes root>/doc/html/index.html` in a browser.
-  + First execute `make` from the command line in the folder `<Agnes root>/doc/latex/` and then open the file `<Agnes root>/doc/latex/refman.pdf` in a pdf-viewer.
+  + First execute `make` from the command line in the folder `<Agnes root>/doc/latex/` and then open the file `<Agnes root>/doc/latex/refman.pdf` in a pdf-viewer.\
+  
+  NOTE: If Graphviz is not installed, then set `HAVE_DOT=NO` in the doxygen configurarion file `doxygen-config-file` before generating the documentation.
 
 ## Directory Structure
 
