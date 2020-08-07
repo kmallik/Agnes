@@ -6,9 +6,11 @@ While the problem at hand is undecidable in general, Agnes promises to provide a
 
 Right now, Agnes is in its nascent stage: It can only support very simple architecture (two systems connected in feedback) with a restriction on the class of specifications (safety and deterministic Büchi).
 
+Please report bugs to kmallik(at)mpi-sws.org.
+
 ## System Requirements
 
-- Operating system: Linux, Max OS. Agnes has not be tested on Windows.
+- Operating system: Linux, Max OS. Agnes has not been tested on Windows.
 - A C++ development environment where where you can compile C++ source codes.
 - Optional requirement for visualization of output: The 'dot' tool from Graphviz, which can be freely downloaded from the Graphviz website (https://www.graphviz.org/download/).
 - Optional requirement for automatically generating the documentation: The Doxygen tool (can be freely downloaded from https://www.doxygen.nl/index.html).
@@ -22,7 +24,7 @@ Right now, Agnes is in its nascent stage: It can only support very simple archit
   
   This requires the Doxygen tool to be installed first. This will create two subfolders `<Agnes root>/doc/html/` and `<Agnes root>/doc/latex/`, and the documentation can be opened in either of the following ways:
   + Open the file `<Agnes root>/doc/html/index.html` in a browser.
-  + First execute `make` from the command line in the folder `<Agnes root>/doc/latex/` and then open the file `<Agnes root>/doc/latex/refman.pdf` in a pdf-viewer.\
+  + First execute `make` from the command line in the folder `<Agnes root>/doc/latex/` and then open the file `<Agnes root>/doc/latex/refman.pdf` in a pdf-viewer.
   
   NOTE: If Graphviz is not installed, then set `HAVE_DOT=NO` in the doxygen configurarion file `doxygen-config-file` before generating the documentation.
 
@@ -39,11 +41,11 @@ In the repository, you will find the following directory structure:
 
 > A more user-friendly command-line version is coming soon that would automate most of the following steps. Until then, you can use Agnes as an API to write your own code for syntehsizing controllers for distributed reactive systems.
 
-If you want to use Agnes to synthesize controllers for your own distributed synthesis problem, you have follow the following steps:
+If you want to use Agnes to synthesize controllers for your own distributed synthesis problem, you have to follow the following steps:
 
 1. Create the following text files to specify the inputs:
 
-    - Two text files, call them `system_0.txt` and `system_1.txt` for encoding the description of the two systems. Each of these two files contain the attributes (e.g. the number of states, number of inputs, transition matrix etc.) of the two systems. Each attribute is specified by first specifying the attribute's name, and then specifying the attribute's value (scalar/1-d array/2-d array) in the following line(s). Following is the list of attributes with their value types in brackets:
+    - Two text files, call them `system_0.txt` and `system_1.txt`, for encoding the description of the two systems. Each of these two files contains the attributes (e.g. the number of states, number of inputs, transition matrix etc.) of the two systems. Each attribute is specified by first specifying the attribute's name, and then specifying the attribute's value (scalar/1-d array/2-d array) in the following line(s). Following is the list of attributes with their value types in brackets:
         + NO_STATES (scalar): Number of system states. If a system has N states, then they are indexed 0,...,N-1.
         + NO_INITIAL_STATES (scalar): Number of initial states.
         + INITIAL_STATE_LIST (1-d array): A list of the initial state indices.
