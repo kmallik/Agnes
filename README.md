@@ -1,6 +1,8 @@
 # Agnes
 
-Agnes is a tool for automatically synthesizing controllers for distributed reactive systems. While the problem at hand is undecidable in general, Agnes promises to provide a sound but incomplete solution. The core underlying theory of Agnes can be found in our EMSOFT 2020 paper; a preprint version is available in the following link: https://people.mpi-sws.org/~kmallik/uploads/AGDistSynth2020.pdf. To cite Agnes, please cite our EMSOFT 2020 paper.
+Agnes is a tool for automatically synthesizing controllers for distributed reactive systems. The name Agnes stands for **A**ssume-**G**uarantee **NE**gotiation for distributed **S**ynthesis.
+
+While the problem at hand is undecidable in general, Agnes promises to provide a sound but incomplete solution. The core underlying theory of Agnes can be found in our EMSOFT 2020 paper; a preprint version is available in the following link: https://people.mpi-sws.org/~kmallik/uploads/AGDistSynth2020.pdf. To cite Agnes, please cite our EMSOFT 2020 paper.
 
 Right now, Agnes is in its nascent stage: It can only support very simple architecture (two systems connected in feedback) with a restriction on the class of specifications (safety and deterministic Büchi).
 
