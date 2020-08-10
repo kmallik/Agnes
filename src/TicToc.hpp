@@ -3,6 +3,8 @@
  *
  *  created on: 02.10.2015
  *      author: rungger
+ *      modified by: kaushik mallik
+ *      taken from the repository of the tool SCOTS (https://gitlab.lrz.de/hcs/scots/-/blob/master/utils/TicToc.hh)
  */
 
 #ifndef TICTOC_HH_
